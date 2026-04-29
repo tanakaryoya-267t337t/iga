@@ -74,18 +74,18 @@ int main()
 		double x = 0.0;
 		double y = 0.0;
 		vector<double> N(p+1, 0.0);
-		for (int j = 0; j <= p; j++)
-		{
-			for (int k = 0; k <= p; k++)
-			{
-				N.at(j) += cex.at((e + j) * first_n + (e + k)) * B.at(k);
-			}
-		}
+		// for (int j = 0; j <= p; j++)
+		// {
+		// 	for (int k = 0; k <= p; k++)
+		// 	{
+		// 		N.at(j) += cex.at((e + j) * first_n + (e + k)) * B.at(k);
+		// 	}
+		// }
 		for (int j = 0; j <= p ; j++)
 		{
-			int global_id = e + j;
-			x += N.at(j) * cp.at(global_id);
-			y += N.at(j) * cp.at(first_n + global_id);
+			int global_id = e*p + j;
+			x += B.at(j) * cp.at(global_id);
+			y += B.at(j) * cp.at(n + global_id);
 			b.at(global_id).at(i) = N.at(j);
 		}
 		cx.push_back(x);
