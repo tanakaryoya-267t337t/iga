@@ -4,6 +4,8 @@ SRCDIR = src
 INCDIR = include
 OBJDIR = obj
 RESDIR = result
+VTKDIR = vtk
+GNUDIR = gnuplot
 SRCS = $(wildcard $(SRCDIR)/*.cpp)
 OBJS = $(patsubst $(SRCDIR)/%.cpp,$(OBJDIR)/%.o,$(SRCS))
 
@@ -20,4 +22,4 @@ clean:
 	rm -f $(OBJDIR)/*.o $(TARGET)
 
 clean-all:
-	rm -f $(OBJDIR)/*.o $(TARGET) $(VTKDIR)/*.vtk
+	rm -f $(OBJDIR)/*.o $(TARGET) $(RESDIR)/$(VTKDIR)/*.vtk
