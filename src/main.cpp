@@ -86,7 +86,7 @@ int main()
 			int global_id = e*p + j;
 			x += B.at(j) * cp.at(global_id);
 			y += B.at(j) * cp.at(n + global_id);
-			b.at(global_id).at(i) = N.at(j);
+			b.at(global_id).at(i) = B.at(j);
 		}
 		cx.push_back(x);
 		cy.push_back(y);
