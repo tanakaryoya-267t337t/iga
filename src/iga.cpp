@@ -34,6 +34,30 @@ vector<double> bernstein(int p, double u)
 	return B;
 }
 
+vector<double> set_open_knot(int p, int a)
+{
+	vector<double> knot;
+	double int_knot = 0.0;
+	for (int i = 0; i <= p; i++)
+	{
+		knot.push_back(int_knot);
+	}
+	int num_int_knot = a + p + 1 - 2*(p + 1);
+	int_knot++;
+
+	for (int i = 0; i < num_int_knot; i++)
+	{
+		knot.push_back(int_knot);
+		int_knot++;
+	}
+
+	for (int i = 0; i <= p; i++)
+	{
+		knot.push_back(int_knot);
+	}
+	return knot;
+}
+
 vector<double> bspline(int p, int a, double u, vector<double> &k)
 {
 	vector<double> N(a, 0.0);
@@ -143,7 +167,7 @@ void knot_insert(int p, int a, vector<double> &knot, vector<double> &cp, double 
 	}
 
 	vector<double> CP(2 * (a + 1), 0.0);
-	vector<double> C((a + 1) * a, 0.0); 
+	vector<double> C((a + 1) * a, 0.0);
 
 	double alpha = 0.0;
 
@@ -167,8 +191,9 @@ void knot_insert(int p, int a, vector<double> &knot, vector<double> &cp, double 
 			CP.at(a + 1 + i) = cp.at(a + i - 1);
 			alpha = 0.0;
 		}
-		if(i < a){
-			C.at(i * (a + 1) + i) = alpha; 
+		if (i < a)
+		{
+			C.at(i * (a + 1) + i) = alpha;
 		}
 
 		if (i > 0)
@@ -177,9 +202,7 @@ void knot_insert(int p, int a, vector<double> &knot, vector<double> &cp, double 
 		}
 	}
 
-
-	vector<double> CT = matT(C, a + 1, a); 
-
+	vector<double> CT = matT(C, a + 1, a);
 
 	vector<double> c_new((a + 1) * (a - 1), 0.0);
 	if (count == 1)
@@ -199,10 +222,10 @@ void knot_insert(int p, int a, vector<double> &knot, vector<double> &cp, double 
 	knot = new_knot;
 	cp = CP;
 	if (count == 0)
-	{	
-			c = CT;
+	{
+		c = CT;
 	}
-	else if(count == 1)
+	else if (count == 1)
 	{
 		c = c_new;
 	}
