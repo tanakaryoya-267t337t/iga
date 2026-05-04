@@ -7,7 +7,7 @@
 
 using namespace std;
 
-vector<double> bernstein(int p, double u)
+vector<double> bernstein_basis_function(int p, double u)
 {
 	vector<double> B(p + 1, 0.0);
 	vector<double> Bn(p + 1, 0.0);
@@ -42,7 +42,7 @@ vector<double> set_open_knot(int p, int a)
 	{
 		knot.push_back(int_knot);
 	}
-	int num_int_knot = a + p + 1 - 2*(p + 1);
+	int num_int_knot = a + p + 1 - 2 * (p + 1);
 	int_knot++;
 
 	for (int i = 0; i < num_int_knot; i++)
@@ -58,7 +58,7 @@ vector<double> set_open_knot(int p, int a)
 	return knot;
 }
 
-vector<double> bspline(int p, int a, double u, vector<double> &k)
+vector<double> bspline_basis_function(int p, int a, double u, vector<double> &k)
 {
 	vector<double> N(a, 0.0);
 	vector<double> Nn(a, 0.0);
@@ -101,6 +101,279 @@ vector<double> bspline(int p, int a, double u, vector<double> &k)
 		}
 	}
 	return N;
+}
+
+vector<double> bspline_curve(int p, int a, vector<double> &cp)
+{
+	int np = 101;
+	vector<double> C(2 * np, 0.0);
+	vector<double> knot = set_open_knot(p, a);
+	double ks = knot.front();
+	double ke = knot.back();
+	for (int i = 0; i < np; i++)
+	{
+		double u = ks + (double)(ke - ks) * i / (np - 1);
+		vector<double> N = bspline_basis_function(p, a, u, knot);
+		double cx = 0.0;
+		double cy = 0.0;
+		for (int j = 0; j < a; j++)
+		{
+			cx += N.at(j) * cp.at(j);
+			cy += N.at(j) * cp.at(a + j);
+		}
+		C.at(i) = cx;
+		C.at(np + i) = cy;
+	}
+	return C;
+}
+
+vector<double> bspline_surface(int np, int px, int py, int nx, int ny, vector<double> &cp)
+{
+	vector<double> C(2 * np * np, 0.0);
+	vector<double> knot_x = set_open_knot(px, nx);
+	vector<double> knot_y = set_open_knot(py, ny);
+	double ksx = knot_x.front();
+	double kex = knot_x.back();
+	double ksy = knot_y.front();
+	double key = knot_y.back();
+	for (int i = 0; i < np; i++)
+	{
+		double uy = ksy + (key - ksy) * i / (np - 1);
+		vector<double> Ny = bspline_basis_function(py, ny, uy, knot_y);
+		for (int j = 0; j < np; j++)
+		{
+			double ux = ksx + (kex - ksx) * j / (np - 1);
+			vector<double> Nx = bspline_basis_function(px, nx, ux, knot_x);
+			double cx = 0.0;
+			double cy = 0.0;
+			for (int a = 0; a < ny; a++)
+			{
+				for (int b = 0; b < nx; b++)
+				{
+					cx += Nx.at(b) * Ny.at(a) * cp.at(a * nx + b);
+					cy += Nx.at(b) * Ny.at(a) * cp.at(nx * ny + a * nx + b);
+				}
+			}
+			C.at(i * np + j) = cx;
+			C.at(np * np + i * np + j) = cy;
+		}
+	}
+	return C;
+}
+
+vector<double> bspline_volume(int np, int px, int py, int pz, int nx, int ny, int nz, vector<double> &cp)
+{
+	vector<double> C(3 * np * np * np, 0.0);
+	vector<double> knot_x = set_open_knot(px, nx);
+	vector<double> knot_y = set_open_knot(py, ny);
+	vector<double> knot_z = set_open_knot(pz, nz);
+	double ksx = knot_x.front();
+	double kex = knot_x.back();
+	double ksy = knot_y.front();
+	double key = knot_y.back();
+	double ksz = knot_z.front();
+	double kez = knot_z.back();
+	for (int i = 0; i < np; i++)
+	{
+		double uz = ksz + (kez - ksz) * i / (np - 1);
+		vector<double> Nz = bspline_basis_function(pz, nz, uz, knot_z);
+		for (int j = 0; j < np; j++)
+		{
+			double uy = ksy + (key - ksy) * j / (np - 1);
+			vector<double> Ny = bspline_basis_function(py, ny, uy, knot_y);
+			for (int k = 0; k < np; k++)
+			{
+				double ux = ksx + (kex - ksx) * k / (np - 1);
+				vector<double> Nx = bspline_basis_function(px, nx, ux, knot_x);
+				double cx = 0.0;
+				double cy = 0.0;
+				double cz = 0.0;
+				for (int a = 0; a < nz; a++)
+				{
+					for (int b = 0; b < ny; b++)
+					{
+						for (int c = 0; c < nx; c++)
+						{
+							cx += Nx.at(c) * Ny.at(b) * Nz.at(a) * cp.at(a * nx * ny + b * nx + c);
+							cy += Nx.at(c) * Ny.at(b) * Nz.at(a) * cp.at(nx * ny * nz + a * nx * ny + b * nx + c);
+							cz += Nx.at(c) * Ny.at(b) * Nz.at(a) * cp.at(2 * nx * ny * nz + a * nx * ny + b * nx + c);
+						}
+					}
+				}
+				C.at(i * np * np + j * np + k) = cx;
+				C.at(np * np * np + i * np * np + j * np + k) = cy;
+				C.at(2 * np * np * np + i * np * np + j * np + k) = cz;
+			}
+		}
+	}
+	return C;
+}
+
+vector<double> nurbs_curve(int np, int px, int nx, vector<double> &cp)
+{
+	vector<double> C(2 * np, 0.0);
+	vector<double> knot = set_open_knot(px, nx);
+	vector<double> w(nx, 0.0);
+	for (int i = 0; i < nx; i++)
+	{
+		w.at(i) = 1.0;
+	}
+	double ksx = knot.front();
+	double kex = knot.back();
+	for (int i = 0; i < np; i++)
+	{
+		double u = ksx + (double)(kex - ksx) * i / (np - 1);
+		vector<double> N = bspline_basis_function(px, nx, u, knot);
+		double R = 0.0;
+		for (int j = 0; j < nx; j++)
+		{
+			R += w.at(j) * N.at(j);
+		}
+		double cx = 0.0;
+		double cy = 0.0;
+		for (int j = 0; j < nx; j++)
+		{
+			cx += w.at(j) * N.at(j) * cp.at(j) / R;
+			cy += w.at(j) * N.at(j) * cp.at(nx + j) / R;
+		}
+		C.at(i) = cx;
+		C.at(np + i) = cy;
+	}
+	return C;
+}
+
+vector<double> nurbs_surface(int np, int px, int nx, int py, int ny, vector<double> &cp)
+{
+	vector<double> C(2 * np * np, 0.0);
+	vector<double> knot_x = set_open_knot(px, nx);
+	vector<double> knot_y = set_open_knot(py, ny);
+
+	vector<double> w(nx * ny, 0.0);
+	for (int i = 0; i < ny; i++)
+	{
+		w.at(i * nx + 0) = 1.0;
+		w.at(i * nx + 1) = 1.0 / sqrt(2.0);
+		w.at(i * nx + 2) = 1.0;
+		w.at(i * nx + 3) = 1.0 / sqrt(2.0);
+		w.at(i * nx + 4) = 1.0;
+		w.at(i * nx + 5) = 1.0 / sqrt(2.0);
+		w.at(i * nx + 6) = 1.0;
+		w.at(i * nx + 7) = 1.0 / sqrt(2.0);
+		w.at(i * nx + 8) = 1.0;
+	}
+
+	double ksx = knot_x.front();
+	double kex = knot_x.back();
+	double ksy = knot_y.front();
+	double key = knot_y.back();
+	for (int i = 0; i < np; i++)
+	{
+		double uy = ksy + (double)(key - ksy) * i / (np - 1);
+		vector<double> Ny = bspline_basis_function(py, ny, uy, knot_y);
+		for (int j = 0; j < np; j++)
+		{
+			double ux = ksx + (double)(kex - ksx) * j / (np - 1);
+			vector<double> Nx = bspline_basis_function(px, nx, ux, knot_x);
+			double R = 0.0;
+			vector<double> N(nx * ny, 0.0);
+			for (int a = 0; a < ny; a++)
+			{
+				for (int b = 0; b < nx; b++)
+				{
+					int id = a * nx + b;
+					N.at(id) = Ny.at(a) * Nx.at(b);
+					R += w.at(id) * N.at(id);
+				}
+			}
+			double cx = 0.0;
+			double cy = 0.0;
+			for (int a = 0; a < ny; a++)
+			{
+				for (int b = 0; b < nx; b++)
+				{
+					int id = a * nx + b;
+					cx += w.at(id) * N.at(id) * cp.at(id) / R;
+					cy += w.at(id) * N.at(id) * cp.at(nx * ny + id) / R;
+				}
+			}
+			C.at(i * np + j) = cx;
+			C.at(np * np + i * np + j) = cy;
+		}
+	}
+	return C;
+}
+
+vector<double> nurbs_volume(int np, int px, int nx, int py, int ny,int pz, int nz, vector<double> &cp)
+{
+	vector<double> C(3 * np * np * np, 0.0);
+	vector<double> knot_x = set_open_knot(px, nx);
+	vector<double> knot_y = set_open_knot(py, ny);
+	vector<double> knot_z = set_open_knot(pz, nz);
+
+	vector<double> w(nx * ny * nz, 0.0);
+	for (int i = 0; i < nz; i++)
+	{
+		for(int j = 0; j < ny; j++){
+			for(int k = 0; k < nx; k++){
+				int id = i * nx * ny + j * nx + k;
+				w.at(id) = 1.0;
+			}
+		}
+	}
+
+	double ksx = knot_x.front();
+	double kex = knot_x.back();
+	double ksy = knot_y.front();
+	double key = knot_y.back();
+	double ksz = knot_z.front();
+	double kez = knot_z.back();
+	
+	for (int i = 0; i < np; i++)
+	{
+		double uz = ksz + (double)(kez - ksz) * i / (np - 1);
+		vector<double> Nz = bspline_basis_function(pz, nz, uz, knot_z);
+		for (int j = 0; j < np; j++)
+		{
+		double uy = ksy + (double)(key - ksy) * j / (np - 1);
+		vector<double> Ny = bspline_basis_function(py, ny, uy, knot_y);
+			for(int k = 0; k < np; k++){
+				double ux = ksx + (double)(kex - ksx) * k / (np - 1);
+				vector<double> Nx = bspline_basis_function(px, nx, ux, knot_x);
+				double R = 0.0;
+				vector<double> N(nx * ny * nz, 0.0);
+				for (int a = 0; a < nz; a++)
+				{
+					for (int b = 0; b < ny; b++)
+					{
+						for(int c = 0; c < nx; c++){
+							int id = a * nx * ny + b * nx + c;
+							N.at(id) = Nz.at(a) * Ny.at(b) * Nx.at(c);
+							R += w.at(id) * N.at(id);
+						}
+					}
+				}
+				double cx = 0.0;
+				double cy = 0.0;
+				double cz = 0.0;
+				for (int a = 0; a < nz; a++)
+				{
+					for (int b = 0; b < ny; b++)
+					{
+						for(int c = 0; c < nx; c++){
+							int id = a * nx * ny + b *nx + c;
+							cx += w.at(id) * N.at(id) * cp.at(id) / R;
+							cy += w.at(id) * N.at(id) * cp.at(nx * ny * nz + id) / R;
+							cz += w.at(id) * N.at(id) * cp.at(2 * nx * ny * nz + id) / R;
+						}
+					}
+				}
+				C.at(i * np * np + j * np + k) = cx;
+				C.at(np * np * np + i * np * np + j * np + k) = cy;
+				C.at(2 * np * np * np + i * np * np + j * np + k) = cz;
+			}
+		}
+	}
+	return C;
 }
 
 vector<int> set_knotspan(vector<double> &knotvector)
@@ -230,61 +503,3 @@ void knot_insert(int p, int a, vector<double> &knot, vector<double> &cp, double 
 		c = c_new;
 	}
 }
-// void knot_insertion(
-// 		vector<double> &knotvector,
-// 		vector<double> &insert_knot,
-// 		vector<vector<double>> &Cm,
-// 		int ncp,
-// 		int p)
-// {
-// 	double ins = insert_knot.front();
-// 	int k;
-// 	for (int i = 0; i < knotvector.size() - 1; i++)
-// 	{
-// 		if (knotvector.at(i) <= ins && ins < knotvector.at(i + 1))
-// 		{
-// 			k = i; // place to insert knot
-// 			break;
-// 		}
-// 	}
-// 	int m = ncp + 1;
-
-// 	Cm.resize(ncp);
-// 	for (int i = 0; i < Cm.size(); i++)
-// 	{
-// 		Cm.at(i).resize(m);
-// 		for (int j = 0; j < Cm.at(i).size(); j++)
-// 		{
-// 			Cm.at(i).at(j) = 0.0;
-// 		}
-// 	}
-
-// 	for (int i = 0; i < m; i++)
-// 	{
-// 		double alpha;
-// 		if (i <= k - p)
-// 		{
-// 			alpha = 1.0;
-// 		}
-// 		else if (i <= k)
-// 		{
-// 			alpha = (ins - knotvector.at(i)) / (knotvector.at(i + p) - knotvector.at(i));
-// 		}
-// 		else
-// 		{
-// 			alpha = 0.0;
-// 		}
-
-// 		if (i < ncp)
-// 		{
-// 			Cm.at(i).at(i) = alpha;
-// 		}
-// 		if (i > 0)
-// 		{
-// 			Cm.at(i - 1).at(i) = 1.0 - alpha;
-// 		}
-// 	}
-
-// 	knotvector.insert(knotvector.begin() + k + 1, ins); // knot(k), newknot, knot(k+1)
-// 	insert_knot.erase(insert_knot.begin());
-// }

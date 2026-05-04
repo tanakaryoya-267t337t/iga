@@ -7,7 +7,7 @@
 
 using namespace std;
 
-void Output(int nn, int ne, vector<double> &x, string &filename)
+void Output(int np,int nn, int ne, vector<double> &x, string &filename)
 {
 	ofstream file("result/vtk/" + filename);
 	file << "# vtk DataFile Version 2.0" << endl;
@@ -15,10 +15,12 @@ void Output(int nn, int ne, vector<double> &x, string &filename)
 	file << "ASCII" << endl;
 	file << "DATASET UNSTRUCTURED_GRID" << endl;
 	file << "POINTS " << nn << " double" << endl;
+	#if 0 
 	for (int i = 0; i < nn; i++)
 	{
 		file << x.at(i) << " " << x.at(nn + i) << " 0" << endl;
 	}
+	#if 0 
 	file << "CELLS " << ne << " " << 3 * ne << endl;
 	for (int i = 0; i < ne; i++)
 	{
@@ -29,7 +31,44 @@ void Output(int nn, int ne, vector<double> &x, string &filename)
 	{
 		file << "3" << endl;
 	}
-
+	#else 
+  file << "CELLS " << ne << " " << 5 * ne << endl;
+  for (int i = 0; i < np - 1; i++)
+  {
+      for(int j = 0; j < np - 1; j++)
+      {
+          int id = i * np + j;
+          file << "4 " << id << " " << id + 1 << " " << id + np + 1 << " " << id + np << endl;
+      }
+  }
+  file << "CELL_TYPES " << ne << endl;
+  for (int i = 0; i < ne; i++)
+  {
+      file << "9" << endl;
+  }
+	#endif
+	#else
+	for (int i = 0; i < nn; i++)
+	{
+		file << x.at(i) << " " << x.at(nn + i) << " " << x.at(2*nn + i) << endl;
+	}
+  file << "CELLS " << ne << " " << 9 * ne << endl;
+  for (int i = 0; i < np - 1; i++)
+  {
+      for(int j = 0; j < np - 1; j++)
+      {
+				for(int k = 0; k < np - 1; k++){
+          int id = i * np * np + j * np + k;
+          file << "8 " << id << " " << id + 1 << " " << id + np + 1 << " " << id + np << " " << id + np * np << " " << id + np * np + 1 << " " << id + np * np + np + 1 << " " << id + np * np + np << endl;
+				}
+      }
+  }
+  file << "CELL_TYPES " << ne << endl;
+  for (int i = 0; i < ne; i++)
+  {
+      file << "12" << endl;
+  }
+	#endif
 	file.close();
 }
 
