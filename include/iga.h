@@ -11,5 +11,5 @@ std::vector<double> nurbs_curve(int np, int px, int nx, std::vector<double> & cp
 std::vector<double> nurbs_surface(int np, int px, int nx, int py, int ny, std::vector<double> & cp);
 std::vector<double> nurbs_volume(int np, int px, int nx, int py, int ny,int pz, int nz, std::vector<double> &cp);
 std::vector<int> set_knotspan(std::vector<double> &knotvector);
-void set_insert_knot(std::vector<double> &knotvector,std::vector<int> &knotspan,std::vector<double> &insert_knot,int p);
+std::vector<double> set_insert_knot(std::vector<double> &knotvector,std::vector<int> &knotspan, int p);
 void knot_insert(int p, int a, std::vector<double> &knot, std::vector<double> &cp, double u, std::vector<double>& c,int count);

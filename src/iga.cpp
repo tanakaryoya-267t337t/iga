@@ -391,12 +391,9 @@ vector<int> set_knotspan(vector<double> &knotvector)
 	return knotspan;
 }
 
-void set_insert_knot(
-		vector<double> &knotvector,
-		vector<int> &knotspan,
-		vector<double> &insert_knot,
-		int p)
+vector<double> set_insert_knot(vector<double> &knotvector,vector<int> &knotspan,int p)
 {
+	vector<double> insert_knot;
 	for (int i = 0; i < knotspan.size(); i++)
 	{
 		int a = knotspan.at(i);
@@ -409,6 +406,7 @@ void set_insert_knot(
 			}
 		}
 	}
+	return insert_knot;
 }
 
 void knot_insert(int p, int a, vector<double> &knot, vector<double> &cp, double u, vector<double> &c, int count)
@@ -501,5 +499,61 @@ void knot_insert(int p, int a, vector<double> &knot, vector<double> &cp, double 
 	else if (count == 1)
 	{
 		c = c_new;
+	}
+}
+
+void knot_insertion(int p, int n){
+	vector<double> knot = set_open_knot(p,n);
+	vector<int> knotspan = set_knotspan(knot);
+	vector<double> insert_knot = set_insert_knot(knot,knotspan,p);
+	int N = n;
+	vector<double> c(n*n,0.0);
+
+	for(int i = 0; i < insert_knot.size(); i++){
+		vector<double> new_knot;
+		int k;
+		for(int j = 0; j < knot.size()+1; j++){
+			if(knot.at(j) <= insert_knot.at(i) && insert_knot.at(i) < knot.at(j+1)){
+				new_knot.push_back(knot.at(j));
+				new_knot.push_back(insert_knot.at(i));
+				k = j;
+			}
+			else{
+				new_knot.push_back(knot.at(j));
+			}
+		}
+		vector<double> alpha;
+		for(int j = 0; j < N + 1; j++){
+			if(j <= k - p){
+				alpha.push_back(1.0);
+			}
+			else if(j <= k){
+				alpha.push_back((insert_knot.at(i) - knot.at(j)) / (knot.at(j + p) - knot.at(j)));
+			}
+			else{
+				alpha.push_back(0.0);
+			}
+		}
+		vector<double> cT(N*(N+1),0.0);
+		for(int j = 0; j < N ; j++){
+			cT.at(j * N + j) = alpha.at(j);
+			cT.at((j+1) * N + j) = alpha.at(j+1);
+		}
+		vector<double> C(n*(N+1),0.0);
+		if(i == 0){
+			C = cT;
+		}
+		else {
+			for(int j = 0; j < N + 1; j++){
+				for(int k = 0; k < n; k++){
+					for(int l = 0; l < N; l++){
+						C.at(j*n+k) += cT.at(j*N+l)*c.at(l*n+k); 
+					}
+				}
+			}
+		}
+		c.resize(n*(N+1));
+		c = C;
+		N++;
 	}
 }
