@@ -409,100 +409,8 @@ vector<double> set_insert_knot(vector<double> &knotvector,vector<int> &knotspan,
 	return insert_knot;
 }
 
-void knot_insert(int p, int a, vector<double> &knot, vector<double> &cp, double u, vector<double> &c, int count)
-{
-	int first_n = 7;
-	int n = knot.size();
-	int ip = 0;
-	vector<double> new_knot(n + 1, 0.0);
-	for (int k = 0; k < n - 1; k++)
-	{
-		if (u >= knot.at(k) && u < knot.at(k + 1))
-		{
-			ip = k;
-			new_knot.at(ip + 1) = u;
-			int N = n - (ip + 1);
-			for (int j = 0; j < n + 1; j++)
-			{
-				if (j <= ip)
-				{
-					new_knot.at(j) = knot.at(j);
-				}
-				else if (j > ip + 1)
-				{
-					new_knot.at(j) = knot.at(j - 1);
-				}
-			}
-			break;
-		}
-	}
 
-	vector<double> CP(2 * (a + 1), 0.0);
-	vector<double> C((a + 1) * a, 0.0);
-
-	double alpha = 0.0;
-
-	for (int i = 0; i < a + 1; i++)
-	{
-		if (i <= ip - p)
-		{
-			CP.at(i) = cp.at(i);
-			CP.at(a + 1 + i) = cp.at(a + i);
-			alpha = 1.0;
-		}
-		else if (i > ip - p && i <= ip)
-		{
-			alpha = (double)(u - knot.at(i)) / (knot.at(i + p) - knot.at(i));
-			CP.at(i) = alpha * cp.at(i) + (1.0 - alpha) * cp.at(i - 1);
-			CP.at(a + 1 + i) = alpha * cp.at(a + i) + (1.0 - alpha) * cp.at(a + i - 1);
-		}
-		else
-		{
-			CP.at(i) = cp.at(i - 1);
-			CP.at(a + 1 + i) = cp.at(a + i - 1);
-			alpha = 0.0;
-		}
-		if (i < a)
-		{
-			C.at(i * (a + 1) + i) = alpha;
-		}
-
-		if (i > 0)
-		{
-			C.at((i - 1) * (a + 1) + i) = 1.0 - alpha;
-		}
-	}
-
-	vector<double> CT = matT(C, a + 1, a);
-
-	vector<double> c_new((a + 1) * (a - 1), 0.0);
-	if (count == 1)
-	{
-		for (int i = 0; i < a + 1; i++)
-		{
-			for (int j = 0; j < first_n; j++)
-			{
-				for (int k = 0; k < a; k++)
-				{
-					c_new.at(i * first_n + j) += CT.at(i * a + k) * c.at(k * first_n + j);
-				}
-			}
-		}
-	}
-
-	knot = new_knot;
-	cp = CP;
-	if (count == 0)
-	{
-		c = CT;
-	}
-	else if (count == 1)
-	{
-		c = c_new;
-	}
-}
-
-void knot_insertion(int p, int n){
+vector<double> knot_insertion(int p, int n){
 	vector<double> knot = set_open_knot(p,n);
 	vector<int> knotspan = set_knotspan(knot);
 	vector<double> insert_knot = set_insert_knot(knot,knotspan,p);
@@ -512,16 +420,14 @@ void knot_insertion(int p, int n){
 	for(int i = 0; i < insert_knot.size(); i++){
 		vector<double> new_knot;
 		int k;
-		for(int j = 0; j < knot.size()+1; j++){
+		for(int j = 0; j < knot.size()-1; j++){
+			new_knot.push_back(knot.at(j));
 			if(knot.at(j) <= insert_knot.at(i) && insert_knot.at(i) < knot.at(j+1)){
-				new_knot.push_back(knot.at(j));
 				new_knot.push_back(insert_knot.at(i));
 				k = j;
 			}
-			else{
-				new_knot.push_back(knot.at(j));
-			}
 		}
+        new_knot.push_back(knot.back());
 		vector<double> alpha;
 		for(int j = 0; j < N + 1; j++){
 			if(j <= k - p){
@@ -537,7 +443,7 @@ void knot_insertion(int p, int n){
 		vector<double> cT(N*(N+1),0.0);
 		for(int j = 0; j < N ; j++){
 			cT.at(j * N + j) = alpha.at(j);
-			cT.at((j+1) * N + j) = alpha.at(j+1);
+			cT.at((j+1) * N + j) = 1.0-alpha.at(j+1);
 		}
 		vector<double> C(n*(N+1),0.0);
 		if(i == 0){
@@ -554,6 +460,169 @@ void knot_insertion(int p, int n){
 		}
 		c.resize(n*(N+1));
 		c = C;
+        knot = new_knot;
 		N++;
 	}
+    c = matT(c,n,N);
+    return c;
+}
+
+vector<double> bezier_element(int p, int n,double u){
+    vector<double> R((n-p)*(p+1),0.0);
+    vector<double> C = knot_insertion(p,n);
+    vector<double> knot = set_open_knot(p,n);
+    vector<int> knotspan = set_knotspan(knot);
+    vector<double> insert_knot = set_insert_knot(knot, knotspan, p);
+    int m = insert_knot.size();
+    int N = n+m;
+
+    for(int i = 0; i < n - p; i++){
+        for(int j = 0; j < p + 1; j++){
+                vector<double> B = bernstein_basis_function(p,u);
+                for(int k = 0; k < p+1; k++){
+                    R.at(i * (p + 1) + j) += C.at(i*(N+p)+j*N+k) * B.at(k);
+            }
+        }
+    }
+    return R;
+}
+
+vector<double> nurbs_iga(int np, int px, int nx, int py, int ny, int pz, int nz, vector<double> & cp){
+    #if 1
+    int ne = nx - px;
+	vector<double> C(2 * np * ne, 0.0);
+	vector<double> w(nx, 0.0);
+	for (int i = 0; i < nx; i++)
+	{
+		w.at(i) = 1.0;
+	}
+    for(int ie = 0; ie < ne; ie++){
+    	for (int i = 0; i < np; i++)
+    	{
+            double u = (double)1.0/(np-1)*i;
+            vector<double> N = bezier_element(px,nx,u);
+    		double R = 0.0;
+    		for (int j = 0; j < px+1; j++)
+    		{
+    			R += w.at(ie+j)* N.at(ie*(px+1)+j);
+    		}
+    		double cx = 0.0;
+    		double cy = 0.0;
+    		for (int j = 0; j < px + 1; j++)
+    		{
+    			cx += w.at(ie+j) * N.at(ie*(px+1)+j) * cp.at(ie+j) / R;
+    			cy += w.at(ie+j) * N.at(ie*(px+1)+j) * cp.at(nx + ie + j) / R;
+    		}
+    		C.at(ie*np+i) = cx;
+    		C.at(np*ne + ie*np + i) = cy;
+    	}
+    }
+
+    #elif 0
+	vector<double> C(2 * np * np, 0.0);
+	vector<double> w(nx * ny, 0.0);
+	for (int i = 0; i < ny; i++)
+	{
+        for(int j = 0; j < nx; j++){
+            int id = i * nx + j;
+            w.at(id)= 1.0;
+        }
+	}
+
+	for (int i = 0; i < np; i++)
+	{
+        double uy = (double)1.0/(np-1)*i;
+		vector<double> Ny = bezier_element(py,ny,uy);
+		for (int j = 0; j < np; j++)
+		{
+            double ux = (double)1.0/(np-1)*j;
+			vector<double> Nx = bezier_element(px,nx);
+			double R = 0.0;
+			vector<double> N(nx * ny, 0.0);
+			for (int a = 0; a < ny; a++)
+			{
+				for (int b = 0; b < nx; b++)
+				{
+					int id = a * nx + b;
+					N.at(id) = Ny.at(a) * Nx.at(b);
+					R += w.at(id) * N.at(id);
+				}
+			}
+			double cx = 0.0;
+			double cy = 0.0;
+			for (int a = 0; a < ny; a++)
+			{
+				for (int b = 0; b < nx; b++)
+				{
+					int id = a * nx + b;
+					cx += w.at(id) * N.at(id) * cp.at(id) / R;
+					cy += w.at(id) * N.at(id) * cp.at(nx * ny + id) / R;
+				}
+			}
+			C.at(i * np + j) = cx;
+			C.at(np * np + i * np + j) = cy;
+		}
+	}
+    #else
+	vector<double> C(3 * np * np * np, 0.0);
+
+	vector<double> w(nx * ny * nz, 0.0);
+	for (int i = 0; i < nz; i++)
+	{
+		for(int j = 0; j < ny; j++){
+			for(int k = 0; k < nx; k++){
+				int id = i * nx * ny + j * nx + k;
+				w.at(id) = 1.0;
+			}
+		}
+	}
+
+	
+	for (int i = 0; i < np; i++)
+	{
+        double uz = (double)1.0/(np-1)*i;
+		vector<double> Nz = bezier_element(pz,nz,uz);
+		for (int j = 0; j < np; j++)
+		{
+            double uy = 1.0/(np-1)*j;
+		vector<double> Ny = bezier_element(py,ny,uy);
+			for(int k = 0; k < np; k++){
+                double ux = 1.0/(np-1)*k;
+				vector<double> Nx = bezier_element(px,nx,ux);
+				double R = 0.0;
+				vector<double> N(nx * ny * nz, 0.0);
+				for (int a = 0; a < nz; a++)
+				{
+					for (int b = 0; b < ny; b++)
+					{
+						for(int c = 0; c < nx; c++){
+							int id = a * nx * ny + b * nx + c;
+							N.at(id) = Nz.at(a) * Ny.at(b) * Nx.at(c);
+							R += w.at(id) * N.at(id);
+						}
+					}
+				}
+				double cx = 0.0;
+				double cy = 0.0;
+				double cz = 0.0;
+				for (int a = 0; a < nz; a++)
+				{
+					for (int b = 0; b < ny; b++)
+					{
+						for(int c = 0; c < nx; c++){
+							int id = a * nx * ny + b *nx + c;
+							cx += w.at(id) * N.at(id) * cp.at(id) / R;
+							cy += w.at(id) * N.at(id) * cp.at(nx * ny * nz + id) / R;
+							cz += w.at(id) * N.at(id) * cp.at(2 * nx * ny * nz + id) / R;
+						}
+					}
+				}
+				C.at(i * np * np + j * np + k) = cx;
+				C.at(np * np * np + i * np * np + j * np + k) = cy;
+				C.at(2 * np * np * np + i * np * np + j * np + k) = cz;
+			}
+		}
+	}
+    #endif
+    return C;
 }

@@ -13,4 +13,6 @@ std::vector<double> nurbs_volume(int np, int px, int nx, int py, int ny,int pz, 
 std::vector<int> set_knotspan(std::vector<double> &knotvector);
 std::vector<double> set_insert_knot(std::vector<double> &knotvector,std::vector<int> &knotspan, int p);
 void knot_insert(int p, int a, std::vector<double> &knot, std::vector<double> &cp, double u, std::vector<double>& c,int count);
-void knot_insertion(int p, int n);
+std::vector<double> knot_insertion(int p, int n);
+std::vector<double> bezier_element(int p, int n, double u);
+std::vector<double> nurbs_iga(int np, int px, int nx, int py, int ny, int pz, int nz, std::vector<double> & cp);

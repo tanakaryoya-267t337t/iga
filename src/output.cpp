@@ -15,12 +15,12 @@ void Output(int np,int nn, int ne, vector<double> &x, string &filename)
 	file << "ASCII" << endl;
 	file << "DATASET UNSTRUCTURED_GRID" << endl;
 	file << "POINTS " << nn << " double" << endl;
-	#if 0 
+	#if 1 
 	for (int i = 0; i < nn; i++)
 	{
 		file << x.at(i) << " " << x.at(nn + i) << " 0" << endl;
 	}
-	#if 0 
+	#if 1 
 	file << "CELLS " << ne << " " << 3 * ne << endl;
 	for (int i = 0; i < ne; i++)
 	{
