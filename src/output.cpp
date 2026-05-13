@@ -15,32 +15,37 @@ void Output(int np,int nn, int ne, vector<double> &x, string &filename)
 	file << "ASCII" << endl;
 	file << "DATASET UNSTRUCTURED_GRID" << endl;
 	file << "POINTS " << nn << " double" << endl;
-	#if 1 
+	#if 0 
 	for (int i = 0; i < nn; i++)
 	{
 		file << x.at(i) << " " << x.at(nn + i) << " 0" << endl;
 	}
-	#if 1 
-	file << "CELLS " << ne << " " << 3 * ne << endl;
-	for (int i = 0; i < ne; i++)
+	#if 0 
+	file << "CELLS " << nn << " " << 3 * nn << endl;
+	for (int i = 0; i < nn - 1; i++)
 	{
 		file << "2 " << i << " " << i + 1 << endl;
 	}
-	file << "CELL_TYPES " << ne << endl;
-	for (int i = 0; i < ne; i++)
+    file << "2 " << nn-1 << " " << 0 << endl;
+	file << "CELL_TYPES " << nn << endl;
+	for (int i = 0; i < nn; i++)
 	{
 		file << "3" << endl;
 	}
 	#else 
   file << "CELLS " << ne << " " << 5 * ne << endl;
-  for (int i = 0; i < np - 1; i++)
-  {
-      for(int j = 0; j < np - 1; j++)
-      {
-          int id = i * np + j;
-          file << "4 " << id << " " << id + 1 << " " << id + np + 1 << " " << id + np << endl;
-      }
-  }
+  int ne_bezier = nn / (np * np);
+  for(int e = 0; e < ne_bezier; e++){
+    int offset = e * np * np;
+        for (int i = 0; i < np - 1; i++)
+        {
+            for(int j = 0; j < np - 1; j++)
+            {
+                int id = offset + i * np + j;
+                file << "4 " << id << " " << id + 1 << " " << id + np + 1 << " " << id + np << endl;
+            }
+        }
+    }
   file << "CELL_TYPES " << ne << endl;
   for (int i = 0; i < ne; i++)
   {
@@ -52,17 +57,21 @@ void Output(int np,int nn, int ne, vector<double> &x, string &filename)
 	{
 		file << x.at(i) << " " << x.at(nn + i) << " " << x.at(2*nn + i) << endl;
 	}
+    int ne_bezier = nn/ (np * np * np);
   file << "CELLS " << ne << " " << 9 * ne << endl;
-  for (int i = 0; i < np - 1; i++)
-  {
-      for(int j = 0; j < np - 1; j++)
-      {
-				for(int k = 0; k < np - 1; k++){
-          int id = i * np * np + j * np + k;
-          file << "8 " << id << " " << id + 1 << " " << id + np + 1 << " " << id + np << " " << id + np * np << " " << id + np * np + 1 << " " << id + np * np + np + 1 << " " << id + np * np + np << endl;
-				}
-      }
-  }
+  for(int e = 0; e < ne_bezier; e++){
+        int offset = e * np * np * np;
+        for (int i = 0; i < np - 1; i++)
+        {
+            for(int j = 0; j < np - 1; j++)
+            {
+		      	for(int k = 0; k < np - 1; k++){
+                      int id = offset + i * np * np + j * np + k;
+                      file << "8 " << id << " " << id + 1 << " " << id + np + 1 << " " << id + np << " " << id + np * np << " " << id + np * np + 1 << " " << id + np * np + np + 1 << " " << id + np * np + np << endl;
+		      	}
+            }
+        }
+    }
   file << "CELL_TYPES " << ne << endl;
   for (int i = 0; i < ne; i++)
   {

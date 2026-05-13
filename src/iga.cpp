@@ -467,8 +467,114 @@ vector<double> knot_insertion(int p, int n){
     return c;
 }
 
-vector<double> bezier_element(int p, int n,double u){
-    vector<double> R((n-p)*(p+1),0.0);
+void periodic_circle(int p,int n, vector<double>& cp){
+    int ne = n - p;
+    int nen = p + 1;
+    vector<double> C(nen*nen,0.0);
+    C.at(0) = 1.0/6.0;
+    C.at(1) = 0.0;
+    C.at(2) = 0.0;
+    C.at(3) = 0.0;
+    C.at(4) = 2.0/3.0;
+    C.at(5) = 2.0/3.0;
+    C.at(6) = 1.0/3.0;
+    C.at(7) = 1.0/6.0;
+    C.at(8) = 1.0/6.0;
+    C.at(9) = 1.0/3.0;
+    C.at(10) = 2.0/3.0;
+    C.at(11) = 2.0/3.0;
+    C.at(12) = 0.0;
+    C.at(13) = 0.0;
+    C.at(14) = 0.0;
+    C.at(15) = 1.0/6.0;
+
+    vector<double> R(ne*nen,0.0);
+
+    int nt = 10;
+    double dt = (double)1.0/nt;
+    for(int it = 0; it < nt + 1; it++){
+        double t = it * dt;
+        vector<double> B = bernstein_basis_function(p,t);
+        for(int i = 0; i < ne; i++){
+            for(int j = 0; j < nen; j++){
+                for(int k = 0; k < nen; k++){
+                    R.at(i * nen + j) += C.at(j*nen+k)*B.at(k);
+                }
+            }
+        }
+    }
+    double W = 0;
+    vector<double> w(ne*nen,0.0);
+    for(int i = 0; i < w.size(); i++){
+        w.at(i) = 1.0;
+    }
+
+    double N = 0.0;
+    
+    for(int i = 0; i < ne; i++){
+        for(int j = 0; j < nen; j++){
+            N += w.at(i * nen + j) * R.at(i * nen + j);
+        }
+    }
+
+    vector<double> p_x;
+    vector<double> p_y;
+    for(int i = 0; i < ne; i++){
+        for(int j = 0; j < nen; j++){
+            double px =0.0;
+            double py =0.0;
+            px = cp.at(i + j) * R.at(i * nen + j) / N;
+            py = cp.at(n + i + j) * R.at(i * nen + j) / N;
+            p_x.push_back(px);
+            p_y.push_back(py);
+        }
+    }
+
+    double r_ave = 0.0;
+    for(int i = 0; i < p_x.size(); i++){
+        r_ave += sqrt(p_x.at(i)*p_x.at(i) + p_y.at(i)*p_y.at(i)) / p_x.size();
+    }
+
+    for(int i = 0; i < n; i++){
+        cp.at(i) /= r_ave;
+        cp.at(n + i) /= r_ave;
+    }
+}
+
+vector<double> periodic_circle_nurbs(int p, int n, double u){
+    int ne = n;
+    int nen = p + 1;
+    vector<double> C(nen*nen,0.0);
+    C.at(0) = 1.0/6.0;
+    C.at(1) = 0.0;
+    C.at(2) = 0.0;
+    C.at(3) = 0.0;
+    C.at(4) = 2.0/3.0;
+    C.at(5) = 2.0/3.0;
+    C.at(6) = 1.0/3.0;
+    C.at(7) = 1.0/6.0;
+    C.at(8) = 1.0/6.0;
+    C.at(9) = 1.0/3.0;
+    C.at(10) = 2.0/3.0;
+    C.at(11) = 2.0/3.0;
+    C.at(12) = 0.0;
+    C.at(13) = 0.0;
+    C.at(14) = 0.0;
+    C.at(15) = 1.0/6.0;
+
+    vector<double> R(nen,0.0);
+
+    vector<double> B = bernstein_basis_function(p,u);
+    for(int i = 0; i < nen; i++){
+        for(int j = 0; j < nen; j++){
+            R.at(i) += C.at(i * nen + j) * B.at(j);
+        }
+    }
+    return R;
+}
+
+vector<double> bezier_element(int p, int n,double u,int i){
+    vector<double> R(p+1,0.0);
     vector<double> C = knot_insertion(p,n);
     vector<double> knot = set_open_knot(p,n);
     vector<int> knotspan = set_knotspan(knot);
@@ -476,20 +582,19 @@ vector<double> bezier_element(int p, int n,double u){
     int m = insert_knot.size();
     int N = n+m;
 
-    for(int i = 0; i < n - p; i++){
-        for(int j = 0; j < p + 1; j++){
-                vector<double> B = bernstein_basis_function(p,u);
-                for(int k = 0; k < p+1; k++){
-                    R.at(i * (p + 1) + j) += C.at(i*(N+p)+j*N+k) * B.at(k);
-            }
+    for(int j = 0; j < p + 1; j++){
+            vector<double> B = bernstein_basis_function(p,u);
+            for(int k = 0; k < p+1; k++){
+                R.at(j) += C.at(i*(N+p)+j*N+k) * B.at(k);
         }
     }
     return R;
 }
 
 vector<double> nurbs_iga(int np, int px, int nx, int py, int ny, int pz, int nz, vector<double> & cp){
-    #if 1
-    int ne = nx - px;
+    #if 0 
+    // periodic_circle(px,nx,cp);
+    int ne = nx;
 	vector<double> C(2 * np * ne, 0.0);
 	vector<double> w(nx, 0.0);
 	for (int i = 0; i < nx; i++)
@@ -500,27 +605,33 @@ vector<double> nurbs_iga(int np, int px, int nx, int py, int ny, int pz, int nz,
     	for (int i = 0; i < np; i++)
     	{
             double u = (double)1.0/(np-1)*i;
-            vector<double> N = bezier_element(px,nx,u);
+            vector<double> N = periodic_circle_nurbs(px, nx, u);
     		double R = 0.0;
     		for (int j = 0; j < px+1; j++)
     		{
-    			R += w.at(ie+j)* N.at(ie*(px+1)+j);
+                int id = (ie + j + nx - 1) % nx;
+    			R += w.at(id)* N.at(j);
     		}
     		double cx = 0.0;
     		double cy = 0.0;
     		for (int j = 0; j < px + 1; j++)
     		{
-    			cx += w.at(ie+j) * N.at(ie*(px+1)+j) * cp.at(ie+j) / R;
-    			cy += w.at(ie+j) * N.at(ie*(px+1)+j) * cp.at(nx + ie + j) / R;
+                int id = (ie + j + nx - 1) % nx;
+    			cx += w.at(id) * N.at(j) * cp.at(id) / R;
+    			cy += w.at(id) * N.at(j) * cp.at(nx + id) / R;
     		}
     		C.at(ie*np+i) = cx;
     		C.at(np*ne + ie*np + i) = cy;
     	}
     }
 
-    #elif 0
-	vector<double> C(2 * np * np, 0.0);
-	vector<double> w(nx * ny, 0.0);
+    #elif 0 
+    int nex = nx;
+    int ney = ny -py;
+    int ne = nex * ney;
+    int nen = px + 1;
+	vector<double> C(2 * ne * np * np, 0.0);
+	vector<double> w(nx*ny, 0.0);
 	for (int i = 0; i < ny; i++)
 	{
         for(int j = 0; j < nx; j++){
@@ -529,42 +640,56 @@ vector<double> nurbs_iga(int np, int px, int nx, int py, int ny, int pz, int nz,
         }
 	}
 
-	for (int i = 0; i < np; i++)
-	{
-        double uy = (double)1.0/(np-1)*i;
-		vector<double> Ny = bezier_element(py,ny,uy);
-		for (int j = 0; j < np; j++)
-		{
-            double ux = (double)1.0/(np-1)*j;
-			vector<double> Nx = bezier_element(px,nx);
-			double R = 0.0;
-			vector<double> N(nx * ny, 0.0);
-			for (int a = 0; a < ny; a++)
-			{
-				for (int b = 0; b < nx; b++)
-				{
-					int id = a * nx + b;
-					N.at(id) = Ny.at(a) * Nx.at(b);
-					R += w.at(id) * N.at(id);
-				}
-			}
-			double cx = 0.0;
-			double cy = 0.0;
-			for (int a = 0; a < ny; a++)
-			{
-				for (int b = 0; b < nx; b++)
-				{
-					int id = a * nx + b;
-					cx += w.at(id) * N.at(id) * cp.at(id) / R;
-					cy += w.at(id) * N.at(id) * cp.at(nx * ny + id) / R;
-				}
-			}
-			C.at(i * np + j) = cx;
-			C.at(np * np + i * np + j) = cy;
-		}
-	}
+    for(int iey = 0; iey < ney; iey++){
+        for(int iex = 0; iex < nex; iex++){
+            int ie = iex * iey;
+	        for (int i = 0; i < np; i++)
+	        {
+               double uy = (double)1.0/(np-1)*i;
+	        	vector<double> Ny = bezier_element(py,ny,uy,iey);
+	        	for (int j = 0; j < np; j++)
+	        	{
+                  double ux = (double)1.0/(np-1)*j;
+	        		vector<double> Nx = periodic_circle_nurbs(px,nx,ux);
+	        		double R = 0.0;
+	        		for (int a = 0; a < nen; a++)
+	        		{
+	        			for (int b = 0; b < nen; b++)
+	        			{
+                            int ix = (iex + b - 1 + nx) % nx;
+                            int iy = iey + a;
+                            int gid = iy * nx + ix;
+	        				double N = Ny.at(a) * Nx.at(b);
+	        				R += w.at(gid) * N;
+	        			}
+	        		}
+	        		double cx = 0.0;
+	        		double cy = 0.0;
+	        		for (int a = 0; a < nen; a++)
+	        		{
+	        			for (int b = 0; b < nen; b++)
+	        			{
+                            int ix = (iex + b - 1 + nx) % nx;
+                            int iy = iey + a;
+                            int gid = iy * nx + ix;
+	        				double N = Ny.at(a) * Nx.at(b);
+	        				cx += w.at(gid) * N * cp.at(gid) / R;
+	        				cy += w.at(gid) * N * cp.at(gid + nx * ny) / R;
+	        			}
+	        		}
+	        		C.at(ie * np * np + i * np + j) = cx;
+	        		C.at(ne * np * np + ie * np * np + i * np + j) = cy;
+	        	}
+	        }
+        }
+    }
     #else
-	vector<double> C(3 * np * np * np, 0.0);
+    int nex = nx;
+    int ney = ny - py;
+    int nez = nz - pz;
+    int ne = nex * ney * nez;
+    int nen = px + 1;
+	vector<double> C(3 * ne * np * np * np, 0.0);
 
 	vector<double> w(nx * ny * nz, 0.0);
 	for (int i = 0; i < nz; i++)
@@ -577,52 +702,64 @@ vector<double> nurbs_iga(int np, int px, int nx, int py, int ny, int pz, int nz,
 		}
 	}
 
-	
-	for (int i = 0; i < np; i++)
-	{
-        double uz = (double)1.0/(np-1)*i;
-		vector<double> Nz = bezier_element(pz,nz,uz);
-		for (int j = 0; j < np; j++)
-		{
-            double uy = 1.0/(np-1)*j;
-		vector<double> Ny = bezier_element(py,ny,uy);
-			for(int k = 0; k < np; k++){
-                double ux = 1.0/(np-1)*k;
-				vector<double> Nx = bezier_element(px,nx,ux);
-				double R = 0.0;
-				vector<double> N(nx * ny * nz, 0.0);
-				for (int a = 0; a < nz; a++)
-				{
-					for (int b = 0; b < ny; b++)
-					{
-						for(int c = 0; c < nx; c++){
-							int id = a * nx * ny + b * nx + c;
-							N.at(id) = Nz.at(a) * Ny.at(b) * Nx.at(c);
-							R += w.at(id) * N.at(id);
-						}
-					}
-				}
-				double cx = 0.0;
-				double cy = 0.0;
-				double cz = 0.0;
-				for (int a = 0; a < nz; a++)
-				{
-					for (int b = 0; b < ny; b++)
-					{
-						for(int c = 0; c < nx; c++){
-							int id = a * nx * ny + b *nx + c;
-							cx += w.at(id) * N.at(id) * cp.at(id) / R;
-							cy += w.at(id) * N.at(id) * cp.at(nx * ny * nz + id) / R;
-							cz += w.at(id) * N.at(id) * cp.at(2 * nx * ny * nz + id) / R;
-						}
-					}
-				}
-				C.at(i * np * np + j * np + k) = cx;
-				C.at(np * np * np + i * np * np + j * np + k) = cy;
-				C.at(2 * np * np * np + i * np * np + j * np + k) = cz;
-			}
-		}
-	}
+    for(int iez = 0; iez < nez; iez++){
+        for(int iey = 0; iey < ney; iey++){
+            for(int iex = 0; iex < nex; iex++){
+                int ie = iez * ney * nex + iey * nex + iex;
+	            for (int i = 0; i < np; i++)
+	            {
+                   double uz = (double)1.0/(np-1)*i;
+	            	vector<double> Nz = bezier_element(pz,nz,uz,iez);
+	            	for (int j = 0; j < np; j++)
+	            	{
+                       double uy = 1.0/(np-1)*j;
+	            	vector<double> Ny = bezier_element(py,ny,uy,iey);
+	            		for(int k = 0; k < np; k++){
+                           double ux = 1.0/(np-1)*k;
+	            			vector<double> Nx = periodic_circle_nurbs(px,nx,ux);
+	            			double R = 0.0;
+	            			for (int a = 0; a < nen; a++)
+	            			{
+	            				for (int b = 0; b < nen; b++)
+	            				{
+	            					for(int c = 0; c < nen; c++){
+                                        int ix = (iex + c - 1 + nx) % nx;
+                                        int iy = iey + b;
+                                        int iz = iez + a;
+                                        int gid = iz * ny * nx + iy * nx + ix;
+	            						double N = Nz.at(a) * Ny.at(b) * Nx.at(c);
+	            						R += w.at(gid) * N;
+	            					}
+	            				}
+	            			}
+	            			double cx = 0.0;
+	            			double cy = 0.0;
+	            			double cz = 0.0;
+	            			for (int a = 0; a < nen; a++)
+	            			{
+	            				for (int b = 0; b < nen; b++)
+	            				{
+	            					for(int c = 0; c < nen; c++){
+                                        int ix = (iex + c - 1 + nx) % nx;
+                                        int iy = iey + b;
+                                        int iz = iez + c;
+                                        int gid = iz * ny * nx + iy * nx + ix;
+	            						double N = Nz.at(a) * Ny.at(b) * Nx.at(c);
+	            						cx += w.at(gid) * N * cp.at(gid) / R;
+	            						cy += w.at(gid) * N * cp.at(nx * ny * nz + gid) / R;
+	            						cz += w.at(gid) * N * cp.at(2 * nx * ny * nz + gid) / R;
+	            					}
+	            				}
+	            			}
+	            			C.at(ie * np * np * np + i * np * np + j * np + k) = cx;
+	            			C.at(ne * np * np * np + ie * np * np * np + i * np * np + j * np + k) = cy;
+	            			C.at(2 * ne * np * np * np + ie * np * np * np +  i * np * np + j * np + k) = cz;
+	            		}
+	            	}
+	            }
+            }
+        }
+    }
     #endif
     return C;
 }
