@@ -16,6 +16,7 @@ int main()
 	int nz = 8;
 	int first_n = 7;
 
+
 #if 0 
 	vector<double> cp(2*nx,0.0);
 	for(int i = 0; i < nx; i++){
@@ -60,13 +61,10 @@ int np = 21;
 int ne_bezier = nx*(ny-p)*(nz-p);
 int nn = np * np * np * ne_bezier;
 int ne = (np-1) * (np-1) * (np - 1) * ne_bezier;
-// int nn = np ;
-// int ne = (np - 1);
-vector<double> C = nurbs_iga(np, p, nx, p, ny, p, nz, cp);
+IGA iga(p, nx, ny, nz, cp, np);
+vector<double> C = iga.nurbs_iga();
 
-string filename = "periodic_tube.vtk";
+string filename = "3D_periodic_tube.vtk";
 Output(np, nn, ne, C, filename);
-// string gnuplotname = "bspline_surface_basis_function.svg";
-// output_gnuplot(n, nn, b, gnuplotname);
 return 0;
 }

@@ -7,7 +7,10 @@
 
 using namespace std;
 
-vector<double> bernstein_basis_function(int p, double u)
+IGA::IGA (int p_, int nx_, int ny_, int nz_, std::vector<double> & cp_, int np_):p(p_),nx(nx_),ny(ny_),nz(nz_),cp(cp_),np(np_){
+}
+
+vector<double> IGA::bernstein_basis_function(double u)
 {
 	vector<double> B(p + 1, 0.0);
 	vector<double> Bn(p + 1, 0.0);
@@ -34,15 +37,15 @@ vector<double> bernstein_basis_function(int p, double u)
 	return B;
 }
 
-vector<double> set_open_knot(int p, int a)
+vector<double>IGA::set_open_knot(int n)
 {
-	vector<double> knot;
+    vector<double> knot;
 	double int_knot = 0.0;
 	for (int i = 0; i <= p; i++)
 	{
 		knot.push_back(int_knot);
 	}
-	int num_int_knot = a + p + 1 - 2 * (p + 1);
+	int num_int_knot = n + p + 1 - 2 * (p + 1);
 	int_knot++;
 
 	for (int i = 0; i < num_int_knot; i++)
@@ -58,13 +61,13 @@ vector<double> set_open_knot(int p, int a)
 	return knot;
 }
 
-vector<double> bspline_basis_function(int p, int a, double u, vector<double> &k)
+vector<double> IGA::bspline_basis_function(int n, double u,vector<double> knot)
 {
-	vector<double> N(a, 0.0);
-	vector<double> Nn(a, 0.0);
-	for (int i = 0; i < a; i++)
+	vector<double> N(n, 0.0);
+	vector<double> Nn(n, 0.0);
+	for (int i = 0; i < n; i++)
 	{
-		if (u >= k.at(i) && u < k.at(i + 1))
+		if (u >= knot.at(i) && u < knot.at(i + 1))
 		{
 			N.at(i) = 1.0;
 		}
@@ -73,29 +76,29 @@ vector<double> bspline_basis_function(int p, int a, double u, vector<double> &k)
 			N.at(i) = 0.0;
 		}
 	}
-	if (u == k.back())
+	if (u == knot.back())
 	{
-		N.at(a - 1) = 1.0;
+		N.at(n - 1) = 1.0;
 	}
 	for (int i = 0; i < p; i++)
 	{
-		for (int j = 0; j < a; j++)
+		for (int j = 0; j < n; j++)
 		{
-			double den1 = (k.at(j + i + 1) - k.at(j));
-			double den2 = (k.at(j + i + 2) - k.at(j + 1));
+			double den1 = (knot.at(j + i + 1) - knot.at(j));
+			double den2 = (knot.at(j + i + 2) - knot.at(j + 1));
 			double turm1 = 0.0;
 			double turm2 = 0.0;
 			if (den1 != 0.0)
 			{
-				turm1 = (u - k.at(j)) / den1 * N.at(j);
+				turm1 = (u - knot.at(j)) / den1 * N.at(j);
 			}
-			if (j < a - 1 && den2 != 0.0)
+			if (j < n - 1 && den2 != 0.0)
 			{
-				turm2 = (k.at(j + i + 2) - u) / den2 * N.at(j + 1);
+				turm2 = (knot.at(j + i + 2) - u) / den2 * N.at(j + 1);
 			}
 			Nn.at(j) = turm1 + turm2;
 		}
-		for (int j = 0; j < a; j++)
+		for (int j = 0; j < n; j++)
 		{
 			N.at(j) = Nn.at(j);
 		}
@@ -103,23 +106,23 @@ vector<double> bspline_basis_function(int p, int a, double u, vector<double> &k)
 	return N;
 }
 
-vector<double> bspline_curve(int p, int a, vector<double> &cp)
+vector<double> IGA::bspline_curve()
 {
 	int np = 101;
 	vector<double> C(2 * np, 0.0);
-	vector<double> knot = set_open_knot(p, a);
+	vector<double> knot = IGA::set_open_knot(nx);
 	double ks = knot.front();
 	double ke = knot.back();
 	for (int i = 0; i < np; i++)
 	{
 		double u = ks + (double)(ke - ks) * i / (np - 1);
-		vector<double> N = bspline_basis_function(p, a, u, knot);
+		vector<double> N = IGA::bspline_basis_function(nx, u, knot);
 		double cx = 0.0;
 		double cy = 0.0;
-		for (int j = 0; j < a; j++)
+		for (int j = 0; j < nx; j++)
 		{
 			cx += N.at(j) * cp.at(j);
-			cy += N.at(j) * cp.at(a + j);
+			cy += N.at(j) * cp.at(nx + j);
 		}
 		C.at(i) = cx;
 		C.at(np + i) = cy;
@@ -127,11 +130,11 @@ vector<double> bspline_curve(int p, int a, vector<double> &cp)
 	return C;
 }
 
-vector<double> bspline_surface(int np, int px, int py, int nx, int ny, vector<double> &cp)
+vector<double> IGA::bspline_surface()
 {
 	vector<double> C(2 * np * np, 0.0);
-	vector<double> knot_x = set_open_knot(px, nx);
-	vector<double> knot_y = set_open_knot(py, ny);
+	vector<double> knot_x = IGA::set_open_knot(nx);
+	vector<double> knot_y = IGA::set_open_knot(ny);
 	double ksx = knot_x.front();
 	double kex = knot_x.back();
 	double ksy = knot_y.front();
@@ -139,11 +142,11 @@ vector<double> bspline_surface(int np, int px, int py, int nx, int ny, vector<do
 	for (int i = 0; i < np; i++)
 	{
 		double uy = ksy + (key - ksy) * i / (np - 1);
-		vector<double> Ny = bspline_basis_function(py, ny, uy, knot_y);
+		vector<double> Ny = bspline_basis_function(ny, uy, knot_y);
 		for (int j = 0; j < np; j++)
 		{
 			double ux = ksx + (kex - ksx) * j / (np - 1);
-			vector<double> Nx = bspline_basis_function(px, nx, ux, knot_x);
+			vector<double> Nx = bspline_basis_function(nx, ux, knot_x);
 			double cx = 0.0;
 			double cy = 0.0;
 			for (int a = 0; a < ny; a++)
@@ -161,12 +164,12 @@ vector<double> bspline_surface(int np, int px, int py, int nx, int ny, vector<do
 	return C;
 }
 
-vector<double> bspline_volume(int np, int px, int py, int pz, int nx, int ny, int nz, vector<double> &cp)
+vector<double> IGA::bspline_volume()
 {
 	vector<double> C(3 * np * np * np, 0.0);
-	vector<double> knot_x = set_open_knot(px, nx);
-	vector<double> knot_y = set_open_knot(py, ny);
-	vector<double> knot_z = set_open_knot(pz, nz);
+	vector<double> knot_x = IGA::set_open_knot(nx);
+	vector<double> knot_y = IGA::set_open_knot(ny);
+	vector<double> knot_z = IGA::set_open_knot(nz);
 	double ksx = knot_x.front();
 	double kex = knot_x.back();
 	double ksy = knot_y.front();
@@ -176,15 +179,15 @@ vector<double> bspline_volume(int np, int px, int py, int pz, int nx, int ny, in
 	for (int i = 0; i < np; i++)
 	{
 		double uz = ksz + (kez - ksz) * i / (np - 1);
-		vector<double> Nz = bspline_basis_function(pz, nz, uz, knot_z);
+		vector<double> Nz = bspline_basis_function(nz, uz, knot_z);
 		for (int j = 0; j < np; j++)
 		{
 			double uy = ksy + (key - ksy) * j / (np - 1);
-			vector<double> Ny = bspline_basis_function(py, ny, uy, knot_y);
+			vector<double> Ny = bspline_basis_function(ny, uy, knot_y);
 			for (int k = 0; k < np; k++)
 			{
 				double ux = ksx + (kex - ksx) * k / (np - 1);
-				vector<double> Nx = bspline_basis_function(px, nx, ux, knot_x);
+				vector<double> Nx = bspline_basis_function(nx, ux, knot_x);
 				double cx = 0.0;
 				double cy = 0.0;
 				double cz = 0.0;
@@ -209,10 +212,10 @@ vector<double> bspline_volume(int np, int px, int py, int pz, int nx, int ny, in
 	return C;
 }
 
-vector<double> nurbs_curve(int np, int px, int nx, vector<double> &cp)
+vector<double> IGA::nurbs_curve()
 {
 	vector<double> C(2 * np, 0.0);
-	vector<double> knot = set_open_knot(px, nx);
+	vector<double> knot = IGA::set_open_knot(nx);
 	vector<double> w(nx, 0.0);
 	for (int i = 0; i < nx; i++)
 	{
@@ -223,7 +226,7 @@ vector<double> nurbs_curve(int np, int px, int nx, vector<double> &cp)
 	for (int i = 0; i < np; i++)
 	{
 		double u = ksx + (double)(kex - ksx) * i / (np - 1);
-		vector<double> N = bspline_basis_function(px, nx, u, knot);
+		vector<double> N = IGA::bspline_basis_function(nx, u, knot);
 		double R = 0.0;
 		for (int j = 0; j < nx; j++)
 		{
@@ -242,11 +245,11 @@ vector<double> nurbs_curve(int np, int px, int nx, vector<double> &cp)
 	return C;
 }
 
-vector<double> nurbs_surface(int np, int px, int nx, int py, int ny, vector<double> &cp)
+vector<double> IGA::nurbs_surface()
 {
 	vector<double> C(2 * np * np, 0.0);
-	vector<double> knot_x = set_open_knot(px, nx);
-	vector<double> knot_y = set_open_knot(py, ny);
+	vector<double> knot_x = IGA::set_open_knot(nx);
+	vector<double> knot_y = IGA::set_open_knot(ny);
 
 	vector<double> w(nx * ny, 0.0);
 	for (int i = 0; i < ny; i++)
@@ -269,11 +272,11 @@ vector<double> nurbs_surface(int np, int px, int nx, int py, int ny, vector<doub
 	for (int i = 0; i < np; i++)
 	{
 		double uy = ksy + (double)(key - ksy) * i / (np - 1);
-		vector<double> Ny = bspline_basis_function(py, ny, uy, knot_y);
+		vector<double> Ny = IGA::bspline_basis_function(ny, uy, knot_y);
 		for (int j = 0; j < np; j++)
 		{
 			double ux = ksx + (double)(kex - ksx) * j / (np - 1);
-			vector<double> Nx = bspline_basis_function(px, nx, ux, knot_x);
+			vector<double> Nx = IGA::bspline_basis_function(nx, ux, knot_x);
 			double R = 0.0;
 			vector<double> N(nx * ny, 0.0);
 			for (int a = 0; a < ny; a++)
@@ -303,12 +306,12 @@ vector<double> nurbs_surface(int np, int px, int nx, int py, int ny, vector<doub
 	return C;
 }
 
-vector<double> nurbs_volume(int np, int px, int nx, int py, int ny,int pz, int nz, vector<double> &cp)
+vector<double> IGA::nurbs_volume()
 {
 	vector<double> C(3 * np * np * np, 0.0);
-	vector<double> knot_x = set_open_knot(px, nx);
-	vector<double> knot_y = set_open_knot(py, ny);
-	vector<double> knot_z = set_open_knot(pz, nz);
+	vector<double> knot_x = IGA::set_open_knot(nx);
+	vector<double> knot_y = IGA::set_open_knot(ny);
+	vector<double> knot_z = IGA::set_open_knot(nz);
 
 	vector<double> w(nx * ny * nz, 0.0);
 	for (int i = 0; i < nz; i++)
@@ -331,14 +334,14 @@ vector<double> nurbs_volume(int np, int px, int nx, int py, int ny,int pz, int n
 	for (int i = 0; i < np; i++)
 	{
 		double uz = ksz + (double)(kez - ksz) * i / (np - 1);
-		vector<double> Nz = bspline_basis_function(pz, nz, uz, knot_z);
+		vector<double> Nz = IGA::bspline_basis_function(nz, uz, knot_z);
 		for (int j = 0; j < np; j++)
 		{
 		double uy = ksy + (double)(key - ksy) * j / (np - 1);
-		vector<double> Ny = bspline_basis_function(py, ny, uy, knot_y);
+		vector<double> Ny = IGA::bspline_basis_function(ny, uy, knot_y);
 			for(int k = 0; k < np; k++){
 				double ux = ksx + (double)(kex - ksx) * k / (np - 1);
-				vector<double> Nx = bspline_basis_function(px, nx, ux, knot_x);
+				vector<double> Nx = IGA::bspline_basis_function(nx, ux, knot_x);
 				double R = 0.0;
 				vector<double> N(nx * ny * nz, 0.0);
 				for (int a = 0; a < nz; a++)
@@ -376,31 +379,31 @@ vector<double> nurbs_volume(int np, int px, int nx, int py, int ny,int pz, int n
 	return C;
 }
 
-vector<int> set_knotspan(vector<double> &knotvector)
+vector<int> IGA::set_knotspan(vector<double> & knot)
 {
 	vector<int> knotspan;
-	double tmp = knotvector.front();
-	for (int i = 0; i < knotvector.size(); i++)
+	double tmp = knot.front();
+	for (int i = 0; i < knot.size(); i++)
 	{
-		if (tmp != knotvector.at(i))
+		if (tmp != knot.at(i))
 		{
 			knotspan.push_back(i);
-			tmp = knotvector.at(i);
+			tmp = knot.at(i);
 		}
 	}
 	return knotspan;
 }
 
-vector<double> set_insert_knot(vector<double> &knotvector,vector<int> &knotspan,int p)
+vector<double> IGA::set_insert_knot(vector<double> & knot, vector<int> & knotspan)
 {
 	vector<double> insert_knot;
 	for (int i = 0; i < knotspan.size(); i++)
 	{
 		int a = knotspan.at(i);
-		double s = knotvector.at(a);
+		double s = knot.at(a);
 		for (int j = 0; j < p; j++)
 		{
-			if (knotvector.at(a + j) != s)
+			if (knot.at(a + j) != s)
 			{
 				insert_knot.push_back(s);
 			}
@@ -410,10 +413,10 @@ vector<double> set_insert_knot(vector<double> &knotvector,vector<int> &knotspan,
 }
 
 
-vector<double> knot_insertion(int p, int n){
-	vector<double> knot = set_open_knot(p,n);
+vector<double> IGA::knot_insertion(int n){
+	vector<double> knot = set_open_knot(n);
 	vector<int> knotspan = set_knotspan(knot);
-	vector<double> insert_knot = set_insert_knot(knot,knotspan,p);
+	vector<double> insert_knot = set_insert_knot(knot,knotspan);
 	int N = n;
 	vector<double> c(n*n,0.0);
 
@@ -467,7 +470,7 @@ vector<double> knot_insertion(int p, int n){
     return c;
 }
 
-void periodic_circle(int p,int n, vector<double>& cp){
+void IGA::periodic_circle(int n){
     int ne = n - p;
     int nen = p + 1;
     vector<double> C(nen*nen,0.0);
@@ -494,7 +497,7 @@ void periodic_circle(int p,int n, vector<double>& cp){
     double dt = (double)1.0/nt;
     for(int it = 0; it < nt + 1; it++){
         double t = it * dt;
-        vector<double> B = bernstein_basis_function(p,t);
+        vector<double> B = IGA::bernstein_basis_function(t);
         for(int i = 0; i < ne; i++){
             for(int j = 0; j < nen; j++){
                 for(int k = 0; k < nen; k++){
@@ -541,7 +544,7 @@ void periodic_circle(int p,int n, vector<double>& cp){
     }
 }
 
-vector<double> periodic_circle_nurbs(int p, int n, double u){
+vector<double> IGA::periodic_circle_nurbs(int n, double u){
     int ne = n;
     int nen = p + 1;
     vector<double> C(nen*nen,0.0);
@@ -564,7 +567,7 @@ vector<double> periodic_circle_nurbs(int p, int n, double u){
 
     vector<double> R(nen,0.0);
 
-    vector<double> B = bernstein_basis_function(p,u);
+    vector<double> B = IGA::bernstein_basis_function(u);
     for(int i = 0; i < nen; i++){
         for(int j = 0; j < nen; j++){
             R.at(i) += C.at(i * nen + j) * B.at(j);
@@ -573,27 +576,26 @@ vector<double> periodic_circle_nurbs(int p, int n, double u){
     return R;
 }
 
-vector<double> bezier_element(int p, int n,double u,int i){
+vector<double> IGA::bezier_element(int n,double u,int ie){
     vector<double> R(p+1,0.0);
-    vector<double> C = knot_insertion(p,n);
-    vector<double> knot = set_open_knot(p,n);
-    vector<int> knotspan = set_knotspan(knot);
-    vector<double> insert_knot = set_insert_knot(knot, knotspan, p);
+    vector<double> C = IGA::knot_insertion(n);
+    vector<double> knot = IGA::set_open_knot(n);
+    vector<int> knotspan = IGA::set_knotspan(knot);
+    vector<double> insert_knot = IGA::set_insert_knot(knot, knotspan);
     int m = insert_knot.size();
     int N = n+m;
 
     for(int j = 0; j < p + 1; j++){
-            vector<double> B = bernstein_basis_function(p,u);
+            vector<double> B = IGA::bernstein_basis_function(u);
             for(int k = 0; k < p+1; k++){
-                R.at(j) += C.at(i*(N+p)+j*N+k) * B.at(k);
+                R.at(j) += C.at(ie*(N+p)+j*N+k) * B.at(k);
         }
     }
     return R;
 }
 
-vector<double> nurbs_iga(int np, int px, int nx, int py, int ny, int pz, int nz, vector<double> & cp){
+vector<double> IGA::nurbs_iga(){
     #if 0 
-    // periodic_circle(px,nx,cp);
     int ne = nx;
 	vector<double> C(2 * np * ne, 0.0);
 	vector<double> w(nx, 0.0);
@@ -605,16 +607,16 @@ vector<double> nurbs_iga(int np, int px, int nx, int py, int ny, int pz, int nz,
     	for (int i = 0; i < np; i++)
     	{
             double u = (double)1.0/(np-1)*i;
-            vector<double> N = periodic_circle_nurbs(px, nx, u);
+            vector<double> N = IGA::periodic_circle_nurbs(nx, u);
     		double R = 0.0;
-    		for (int j = 0; j < px+1; j++)
+    		for (int j = 0; j < p+1; j++)
     		{
                 int id = (ie + j + nx - 1) % nx;
     			R += w.at(id)* N.at(j);
     		}
     		double cx = 0.0;
     		double cy = 0.0;
-    		for (int j = 0; j < px + 1; j++)
+    		for (int j = 0; j < p + 1; j++)
     		{
                 int id = (ie + j + nx - 1) % nx;
     			cx += w.at(id) * N.at(j) * cp.at(id) / R;
@@ -627,9 +629,9 @@ vector<double> nurbs_iga(int np, int px, int nx, int py, int ny, int pz, int nz,
 
     #elif 0 
     int nex = nx;
-    int ney = ny -py;
+    int ney = ny -p;
     int ne = nex * ney;
-    int nen = px + 1;
+    int nen = p + 1;
 	vector<double> C(2 * ne * np * np, 0.0);
 	vector<double> w(nx*ny, 0.0);
 	for (int i = 0; i < ny; i++)
@@ -646,11 +648,11 @@ vector<double> nurbs_iga(int np, int px, int nx, int py, int ny, int pz, int nz,
 	        for (int i = 0; i < np; i++)
 	        {
                double uy = (double)1.0/(np-1)*i;
-	        	vector<double> Ny = bezier_element(py,ny,uy,iey);
+	        	vector<double> Ny = IGA::bezier_element(ny,uy,iey);
 	        	for (int j = 0; j < np; j++)
 	        	{
                   double ux = (double)1.0/(np-1)*j;
-	        		vector<double> Nx = periodic_circle_nurbs(px,nx,ux);
+	        		vector<double> Nx = IGA::periodic_circle_nurbs(nx,ux);
 	        		double R = 0.0;
 	        		for (int a = 0; a < nen; a++)
 	        		{
@@ -685,10 +687,10 @@ vector<double> nurbs_iga(int np, int px, int nx, int py, int ny, int pz, int nz,
     }
     #else
     int nex = nx;
-    int ney = ny - py;
-    int nez = nz - pz;
+    int ney = ny - p;
+    int nez = nz - p;
     int ne = nex * ney * nez;
-    int nen = px + 1;
+    int nen = p + 1;
 	vector<double> C(3 * ne * np * np * np, 0.0);
 
 	vector<double> w(nx * ny * nz, 0.0);
@@ -709,14 +711,14 @@ vector<double> nurbs_iga(int np, int px, int nx, int py, int ny, int pz, int nz,
 	            for (int i = 0; i < np; i++)
 	            {
                     double uz = (double)1.0/(np-1)*i;
-	            	vector<double> Nz = bezier_element(pz,nz,uz,iez);
+	            	vector<double> Nz = IGA::bezier_element(nz,uz,iez);
 	            	for (int j = 0; j < np; j++)
 	            	{
                         double uy = (double)1.0/(np-1)*j;
-	            	    vector<double> Ny = bezier_element(py,ny,uy,iey);
+	            	    vector<double> Ny = IGA::bezier_element(ny,uy,iey);
 	            		for(int k = 0; k < np; k++){
                            double ux = 1.0/(np-1)*k;
-	            			vector<double> Nx = periodic_circle_nurbs(px,nx,ux);
+	            			vector<double> Nx = IGA::periodic_circle_nurbs(nx,ux);
 	            			double R = 0.0;
 	            			for (int a = 0; a < nen; a++)
 	            			{
