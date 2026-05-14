@@ -64,7 +64,7 @@ int ne = (np-1) * (np-1) * (np - 1) * ne_bezier;
 IGA iga(p, nx, ny, nz, cp, np);
 vector<double> C = iga.nurbs_iga();
 
-string filename = "3D_periodic_tube.vtk";
+string filename = "element_periodic_tube.vtk";
 Output(np, nn, ne, C, filename);
 return 0;
 }
