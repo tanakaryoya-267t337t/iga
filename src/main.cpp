@@ -11,9 +11,9 @@ using namespace std;
 int main()
 {
 	int p = 3;
-	int nx = 20;
+	int nx = 10;
 	int ny = 5;
-	int nz = 10;
+	int nz = 8;
 	int first_n = 7;
 
 #if 0 
@@ -56,7 +56,7 @@ int main()
 #endif
 
 
-int np = 51;
+int np = 21;
 int ne_bezier = nx*(ny-p)*(nz-p);
 int nn = np * np * np * ne_bezier;
 int ne = (np-1) * (np-1) * (np - 1) * ne_bezier;

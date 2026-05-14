@@ -708,12 +708,12 @@ vector<double> nurbs_iga(int np, int px, int nx, int py, int ny, int pz, int nz,
                 int ie = iez * ney * nex + iey * nex + iex;
 	            for (int i = 0; i < np; i++)
 	            {
-                   double uz = (double)1.0/(np-1)*i;
+                    double uz = (double)1.0/(np-1)*i;
 	            	vector<double> Nz = bezier_element(pz,nz,uz,iez);
 	            	for (int j = 0; j < np; j++)
 	            	{
-                       double uy = 1.0/(np-1)*j;
-	            	vector<double> Ny = bezier_element(py,ny,uy,iey);
+                        double uy = (double)1.0/(np-1)*j;
+	            	    vector<double> Ny = bezier_element(py,ny,uy,iey);
 	            		for(int k = 0; k < np; k++){
                            double ux = 1.0/(np-1)*k;
 	            			vector<double> Nx = periodic_circle_nurbs(px,nx,ux);
@@ -742,7 +742,7 @@ vector<double> nurbs_iga(int np, int px, int nx, int py, int ny, int pz, int nz,
 	            					for(int c = 0; c < nen; c++){
                                         int ix = (iex + c - 1 + nx) % nx;
                                         int iy = iey + b;
-                                        int iz = iez + c;
+                                        int iz = iez + a;
                                         int gid = iz * ny * nx + iy * nx + ix;
 	            						double N = Nz.at(a) * Ny.at(b) * Nx.at(c);
 	            						cx += w.at(gid) * N * cp.at(gid) / R;
