@@ -28,7 +28,7 @@ class IGA {
     std::vector<int> set_knotspan(std::vector<double> & knot);
     std::vector<double> set_insert_knot(std::vector<double> & knot, std::vector<int> & knotspan);
     std::vector<std::vector<double>> knot_insertion(int n);
-    void periodic_circle(int n);
+    void periodic_tube();
     std::vector<double> periodic_circle_nurbs(int n, double u);
     std::vector<double> bezier_element(int n, double u, int ie);
     std::vector<double> nurbs_basis(int ie);

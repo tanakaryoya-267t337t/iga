@@ -511,8 +511,7 @@ vector<vector<double>> IGA::knot_insertion(int n){
     return C_ele;
 }
 
-void IGA::periodic_circle(int n){
-    int ne1 = n - p;
+void IGA::periodic_tube(){
     vector<double> C(nen*nen,0.0);
     C.at(0) = 1.0/6.0;
     C.at(1) = 0.0;
@@ -531,56 +530,62 @@ void IGA::periodic_circle(int n){
     C.at(14) = 0.0;
     C.at(15) = 1.0/6.0;
 
-    vector<double> R(ne1*nen,0.0);
-
-    int nt = 10;
-    double dt = (double)1.0/nt;
-    for(int it = 0; it < nt + 1; it++){
-        double t = it * dt;
-        vector<double> B = IGA::bernstein_basis_function(t);
-        for(int i = 0; i < ne1; i++){
-            for(int j = 0; j < nen; j++){
-                for(int k = 0; k < nen; k++){
-                    R.at(i * nen + j) += C.at(j*nen+k)*B.at(k);
-                }
-            }
-        }
-    }
-    double W = 0;
-    vector<double> w(ne1*nen,0.0);
+    
+    vector<double> w(nx*nen,0.0);
     for(int i = 0; i < w.size(); i++){
         w.at(i) = 1.0;
     }
 
-    double N = 0.0;
-    
-    for(int i = 0; i < ne; i++){
-        for(int j = 0; j < nen; j++){
-            N += w.at(i * nen + j) * R.at(i * nen + j);
-        }
+    double pi = acos(-1.0);
+    vector<double> tx;
+    vector<double> ty;
+    for(int i=0; i<nx; i++){
+        double ang = 2.0*pi* static_cast<double>(i)/static_cast<double>(nx);
+        double tmp_x = cos(ang);
+        double tmp_y = sin(ang);
+        tx.push_back(tmp_x);
+        ty.push_back(tmp_y);
     }
-
+    int nt = 10;
+    double dt = (double)1.0/nt;
+    double r_ave = 0.0;
+    int count = 0;
     vector<double> p_x;
     vector<double> p_y;
-    for(int i = 0; i < ne1; i++){
-        for(int j = 0; j < nen; j++){
+    for(int i = 0; i < nx; i++){
+        for(int it = 0; it < nt + 1; it++){
+            double t = it * dt;
+            vector<double> B = IGA::bernstein_basis_function(t);
+            vector<double> R(nx*nen,0.0);
+            for(int j = 0; j < nen; j++){
+                for(int k = 0; k < nen; k++){
+                    R.at(j) += C.at(j*nen+k)*B.at(k);
+                }
+            }
+            double N = 0.0;
+    
+            for(int j = 0; j < nen; j++){
+                N += w.at(j) * R.at(j);
+            }
+
             double px =0.0;
             double py =0.0;
-            px = cp.at(i + j) * R.at(i * nen + j) / N;
-            py = cp.at(n + i + j) * R.at(i * nen + j) / N;
-            p_x.push_back(px);
-            p_y.push_back(py);
+            for(int j = 0; j < nen; j++){
+                int id = (i + j) % nx;
+                px += tx.at(id) * R.at(j) / N;
+                py += ty.at(id) * R.at(j) / N;
+            }
+
+            r_ave += sqrt(px*px + py*py); 
+            count++;
         }
     }
 
-    double r_ave = 0.0;
-    for(int i = 0; i < p_x.size(); i++){
-        r_ave += sqrt(p_x.at(i)*p_x.at(i) + p_y.at(i)*p_y.at(i)) / p_x.size();
-    }
+    r_ave /= static_cast<double>(count);
 
-    for(int i = 0; i < n; i++){
+    for(int i = 0; i < nn; i++){
         cp.at(i) /= r_ave;
-        cp.at(n + i) /= r_ave;
+        cp.at(nn + i) /= r_ave;
     }
 }
 
@@ -794,6 +799,8 @@ vector<double> IGA::nurbs_iga(){
     int nez = nz - p;
     int ne = nex * ney * nez;
     vector<double> C(3 * ne * np * np * np, 0.0);
+    IGA::periodic_tube();
+
 
     for(int ie = 0; ie < ne; ie++){
         vector<double> N = IGA::nurbs_basis(ie);

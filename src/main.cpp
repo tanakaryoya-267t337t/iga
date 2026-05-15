@@ -11,11 +11,21 @@ using namespace std;
 int main()
 {
 	int p = 3;
-	int nx = 10;
+    int onx = 10;
+    int addnx = 3;
+	int nx = onx + addnx;
 	int ny = 5;
 	int nz = 8;
 	int first_n = 7;
 
+    double ith;
+    double pi = acos(-1.0);
+    for(int i = 0; i < onx; i++){
+        double theta = 2*pi*i/onx;
+        if((pi/2.0 - theta) > 0.0){
+            ith = theta;
+        }
+    }
 
 #if 0 
 	vector<double> cp(2*nx,0.0);
@@ -37,14 +47,16 @@ int main()
     }
 #else
 	vector<double> cp(3 * nx * ny * nz, 0.0);
-    double pi = acos(-1.0);
 	for (int i = 0; i < nz; i++)
 	{
 		for (int j = 0; j < ny; j++)
 		{
 			for (int k = 0; k < nx; k++)
 			{
-                double theta = 2.0*pi*k/nx;
+                double theta;
+                if(k==0) double theta = ith;
+                else if(k > 0 && k < addnx + 1) double theta = 2.0*pi/onx/addnx*k + ith; 
+                else double theta = 2.0*pi*(k-addnx)/onx + ith;
                 double r = 0.80 + (1.0 - 0.80)/(ny-1) * j;
                 double l = 4.0/(nz-1)*i;
 				int id = i * nx * ny + j * nx + k;
