@@ -57,7 +57,7 @@ int main()
 #endif
 
 
-int np = 21;
+int np = 10;
 int ne_bezier = nx*(ny-p)*(nz-p);
 int nn = np * np * np * ne_bezier;
 int ne = (np-1) * (np-1) * (np - 1) * ne_bezier;

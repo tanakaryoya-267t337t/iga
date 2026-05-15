@@ -9,15 +9,26 @@ using namespace std;
 
 IGA::IGA (int p_, int nx_, int ny_, int nz_, std::vector<double> & cp_, int np_):p(p_),nx(nx_),ny(ny_),nz(nz_),cp(cp_),np(np_){
     this->nn = nx_*ny_*nz_;
-    this->ne = nx_*(ny_-p)*(nz_-p);
     this->nen = p+1;
-    for(int iez = 0; iez < nz_-1; iez++){
-        for(int iey = 0; iey < ny_ -1; iey++){
-            for(int iex = 0; iex < nx_ -1; iex++){
+
+    int nex = nx_;
+    int ney = ny_ - p;
+    int nez = nz_ - p;
+
+    this->ne = nex * ney * nez;
+
+    for(int iez = 0; iez < nez; iez++){
+        for(int iey = 0; iey < ney; iey++){
+            for(int iex = 0; iex < nex; iex++){
                 for(int i = 0; i <nen; i++){
                     for(int j = 0; j < nen; j++){
                         for(int k = 0; k < nen; k++){
-                            ien.push_back((iez+i)*nx_*ny_+(iey+j)*nx_+iex+k);
+
+                            int ix = (iex + k + nx_) % nx_;
+                            int iy = iey + j;
+                            int iz = iez + i;
+                            int id = iz * nx_ * ny_ + iy * nx_ + ix;
+                            ien.push_back(id);
                         }
                     }
                 }
@@ -487,10 +498,12 @@ vector<vector<double>> IGA::knot_insertion(int n){
 	}
     c = matT(c,n,N);
     vector<vector<double>> C_ele(N-p,vector<double>(nen*nen,0.0));
-    for(int ie = 0; ie < N-p; ie++){
+    for(int ie = 0; ie < n-p; ie++){
         for(int i = 0; i < nen; i++){
             for(int j = 0; j < nen; j++){
-                C_ele.at(ie).at(i*nen+j) = c.at(ie*(N+p)+i*N+j);
+                int row = ie + i;
+                int col = ie * p + j;
+                C_ele.at(ie).at(i*nen+j) = c.at(row * N + col);
             }
         }
     }
@@ -611,10 +624,11 @@ vector<double> IGA::bezier_element(int n,double u,int ie){
     int m = insert_knot.size();
     int N = n+m;
 
+    vector<double> B = IGA::bernstein_basis_function(u);
+
     for(int i = 0; i < p + 1; i++){
-            vector<double> B = IGA::bernstein_basis_function(u);
             for(int j = 0; j < p + 1; j++){
-                R.at(j) += C.at(ie).at(i*(p+1)+j) * B.at(j);
+                R.at(i) += C.at(ie).at(i*(p+1)+j) * B.at(j);
         }
     }
     return R;
@@ -622,6 +636,14 @@ vector<double> IGA::bezier_element(int n,double u,int ie){
 
 vector<double> IGA::nurbs_basis(int ie){
     int ien_offset = this->ien_offset.at(ie);
+    int nex = nx;
+    int ney = ny - p;
+    int nez = nz - p;
+
+    int iex = ie % nex;
+    int iey = (ie / nex) % ney;
+    int iez = ie / (nex * ney);
+
     vector<double> nurbs;
     vector<double> w(nx*ny*nz,0.0);
     for(int i = 0; i < nz; i++){
@@ -632,43 +654,47 @@ vector<double> IGA::nurbs_basis(int ie){
         }
     }
 
-    vector<double> R;
-    int div = 10;
-    for(int i = 0; i < div; i++){
-        double t = (double)i/(div-1);
-        vector<double> Rx = IGA::periodic_circle_nurbs(nx,t);
-        vector<double> Ry = IGA::bezier_element(ny,t,ie);
-        vector<double> Rz = IGA::bezier_element(nz,t,ie);
-        for(int iz = 0; iz < nen; iz++){
-            for(int iy = 0; iy < nen; iy++){
-                for(int ix = 0; ix < nen; ix++){
-                    double r = Rx.at(ix) * Ry.at(iy) * Rz.at(iz);
-                    R.push_back(r);
+    for(int itz = 0; itz < np; itz++){
+        double tz = (double)itz/(np-1); 
+        vector<double> Rz = IGA::bezier_element(nz,tz,iez);
+        for(int ity = 0; ity < np; ity++){
+            double ty = (double)ity/(np-1);
+            vector<double> Ry = IGA::bezier_element(ny,ty,iey);
+            for(int itx = 0; itx < np; itx++){
+                double tx = (double)itx/(np-1);
+                vector<double> Rx = IGA::periodic_circle_nurbs(nx,tx);
+                vector<double> R(nen*nen*nen, 0.0);
+                for(int iz = 0; iz < nen; iz++){
+                    for(int iy = 0; iy < nen; iy++){
+                        for(int ix = 0; ix < nen; ix++){  
+                            int id = iz*nen*nen + iy*nen + ix;
+                            R.at(id) = Rx.at(ix) * Ry.at(iy) * Rz.at(iz);
+                        }
+                    }
                 }
-            }
-        }
-        double W = 0.0;
-        for(int i = 0; i < nen; i++){
-            for(int j = 0; j < nen; j++){
-                for(int k = 0; k < nen; k++){
-                    int id = i*nen*nen+j*nen+k;
-                    int ien = this->ien.at(ien_offset+id);
-                    W += w.at(ien) * R.at(id);
+                double W = 0.0;
+                for(int i = 0; i < nen; i++){
+                    for(int j = 0; j < nen; j++){
+                        for(int k = 0; k < nen; k++){
+                            int id = i*nen*nen + j*nen + k;
+                            int ien = this->ien.at(ien_offset+id);
+                            W += w.at(ien) * R.at(id);
+                        }
+                    }
                 }
-            }
-        }
-        for(int i = 0; i < nen; i++){
-            for(int j = 0; j < nen; j++){
-                for(int k = 0; k < nen; k++){
-                    int id = i*nen*nen+j*nen+k;
-                    int ien = this->ien.at(ien_offset+id);
-                    double n = w.at(ien) * R.at(id)/W;
-                    nurbs.push_back(n);
+                for(int i = 0; i < nen; i++){
+                    for(int j = 0; j < nen; j++){
+                        for(int k = 0; k < nen; k++){
+                            int id = i*nen*nen+j*nen+k;
+                            int ien = this->ien.at(ien_offset+id);
+                            double n = w.at(ien) * R.at(id)/W;
+                            nurbs.push_back(n);
+                        }
+                    }
                 }
             }
         }
     }
-
     return nurbs;
 }
 
@@ -767,8 +793,7 @@ vector<double> IGA::nurbs_iga(){
     int ney = ny - p;
     int nez = nz - p;
     int ne = nex * ney * nez;
-    int np = 10;
-    vector<double> C(3 * ne * np, 0.0);
+    vector<double> C(3 * ne * np * np * np, 0.0);
 
     // vector<double> w(nx * ny * nz, 0.0);
 	// for (int i = 0; i < nz; i++)
@@ -784,25 +809,29 @@ vector<double> IGA::nurbs_iga(){
     for(int ie = 0; ie < ne; ie++){
         vector<double> N = IGA::nurbs_basis(ie);
         int ien_offset_e = this->ien_offset.at(ie);
-        for(int it = 0; it < np; it++){
-            double cx = 0.0;
-            double cy = 0.0;
-            double cz = 0.0;
-            for(int iz = 0; iz < nen; iz++){
-                for(int iy = 0; iy < nen; iy++){
-                    for(int ix = 0; ix < nen; ix++){
-                        int id = it*nen*nen*nen + iz*nen*nen + iy*nen + ix;
-                        int ied = iz*nen*nen + iy*nen + ix;
-                        int ien_e = this->ien.at(ien_offset_e+ied);
-                        cx += N.at(id) * cp.at(ien_e);
-                        cy += N.at(id) * cp.at(nn + ien_e);
-                        cz += N.at(id) * cp.at(2 *nn + ien_e);
+        for(int itz = 0; itz < np; itz++){
+            for(int ity = 0; ity < np; ity++){
+                for(int itx = 0; itx < np; itx++){
+                    double cx = 0.0;
+                    double cy = 0.0;
+                    double cz = 0.0;
+                    for(int iz = 0; iz < nen; iz++){
+                        for(int iy = 0; iy < nen; iy++){
+                            for(int ix = 0; ix < nen; ix++){
+                                int id = itz*np*np*nen*nen*nen + ity*np*nen*nen*nen + itx*nen*nen*nen + iz*nen*nen + iy*nen + ix;
+                                int ied = iz*nen*nen + iy*nen + ix;
+                                int ien_e = this->ien.at(ien_offset_e+ied);
+                                cx += N.at(id) * cp.at(ien_e);
+                                cy += N.at(id) * cp.at(nn + ien_e);
+                                cz += N.at(id) * cp.at(2 *nn + ien_e);
+                            }
+                        }
                     }
+                    C.at(ie*np*np*np + itz*np*np + ity*np + itx) = cx;
+                    C.at(ne*np*np*np + ie*np*np*np + itz*np*np + ity*np + itx) = cy;
+                    C.at(2*ne*np*np*np + ie*np*np*np + itz*np*np + ity*np + itx) = cz;
                 }
             }
-            C.at(ie*np + it) = cx;
-            C.at(ne*np + ie*np + it) = cy;
-            C.at(2*ne*np + ie*np + it) = cz;
         }
     }
 
