@@ -795,17 +795,6 @@ vector<double> IGA::nurbs_iga(){
     int ne = nex * ney * nez;
     vector<double> C(3 * ne * np * np * np, 0.0);
 
-    // vector<double> w(nx * ny * nz, 0.0);
-	// for (int i = 0; i < nz; i++)
-	// {
-		// for(int j = 0; j < ny; j++){
-			// for(int k = 0; k < nx; k++){
-				// int id = i * nx * ny + j * nx + k;
-				// w.at(id) = 1.0;
-			// }
-		// }
-	// }
-
     for(int ie = 0; ie < ne; ie++){
         vector<double> N = IGA::nurbs_basis(ie);
         int ien_offset_e = this->ien_offset.at(ie);
@@ -835,64 +824,6 @@ vector<double> IGA::nurbs_iga(){
         }
     }
 
-    // for(int iez = 0; iez < nez; iez++){
-        // for(int iey = 0; iey < ney; iey++){
-            // for(int iex = 0; iex < nex; iex++){
-                // int ie = iez * ney * nex + iey * nex + iex;
-	            // for (int i = 0; i < np; i++)
-	            // {
-                    // double uz = (double)1.0/(np-1)*i;
-	            	// vector<double> Nz = IGA::bezier_element(nz,uz,iez);
-	            	// for (int j = 0; j < np; j++)
-	            	// {
-                        // double uy = (double)1.0/(np-1)*j;
-	            	    // vector<double> Ny = IGA::bezier_element(ny,uy,iey);
-	            		// for(int k = 0; k < np; k++){
-                        //    double ux = 1.0/(np-1)*k;
-	            			// vector<double> Nx = IGA::periodic_circle_nurbs(nx,ux);
-	            			// double R = 0.0;
-	            			// for (int a = 0; a < nen; a++)
-	            			// {
-	            				// for (int b = 0; b < nen; b++)
-	            				// {
-	            					// for(int c = 0; c < nen; c++){
-                                        // int ix = (iex + c - 1 + nx) % nx;
-                                        // int iy = iey + b;
-                                        // int iz = iez + a;
-                                        // int gid = iz * ny * nx + iy * nx + ix;
-	            						// double N = Nz.at(a) * Ny.at(b) * Nx.at(c);
-	            						// R += w.at(gid) * N;
-	            					// }
-	            				// }
-	            			// }
-	            			// double cx = 0.0;
-	            			// double cy = 0.0;
-	            			// double cz = 0.0;
-	            			// for (int a = 0; a < nen; a++)
-	            			// {
-	            				// for (int b = 0; b < nen; b++)
-	            				// {
-	            					// for(int c = 0; c < nen; c++){
-                                        // int ix = (iex + c - 1 + nx) % nx;
-                                        // int iy = iey + b;
-                                        // int iz = iez + a;
-                                        // int gid = iz * ny * nx + iy * nx + ix;
-	            						// double N = Nz.at(a) * Ny.at(b) * Nx.at(c);
-	            						// cx += w.at(gid) * N * cp.at(gid) / R;
-	            						// cy += w.at(gid) * N * cp.at(nx * ny * nz + gid) / R;
-	            						// cz += w.at(gid) * N * cp.at(2 * nx * ny * nz + gid) / R;
-	            					// }
-	            				// }
-	            			// }
-	            			// C.at(ie * np * np * np + i * np * np + j * np + k) = cx;
-	            			// C.at(ne * np * np * np + ie * np * np * np + i * np * np + j * np + k) = cy;
-	            			// C.at(2 * ne * np * np * np + ie * np * np * np +  i * np * np + j * np + k) = cz;
-	            		// }
-	            	// }
-	            // }
-            // }
-        // }
-    // }
     #endif
     return C;
 }
