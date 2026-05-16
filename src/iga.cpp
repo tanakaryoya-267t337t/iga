@@ -7,27 +7,37 @@
 
 using namespace std;
 
-IGA::IGA (int p_, int nx_, int ny_, int nz_, std::vector<double> & cp_, int np_):p(p_),nx(nx_),ny(ny_),nz(nz_),cp(cp_),np(np_){
-    this->nn = nx_*ny_*nz_;
-    this->nen = p+1;
+IGA::IGA (int p_, int nx1_, int ny1_, int nz1_,int nx2_, int ny2_, int nz2_, vector<double> & cp_, int np_):p(p_),nx1(nx1_),ny1(ny1_),nz1(nz1_),nx2(nx2_),ny2(ny2_),nz2(nz2_),cp(cp_),np(np_){
+    this->nn = nx1_*ny1_*nz1_ + nx2_*ny2_*nz2_;
+    this->nen = p + 1;
 
-    int nex = nx_;
-    int ney = ny_ - p;
-    int nez = nz_ - p;
+    int nex1 = nx1_;
+    int ney1 = ny1_ - p;
+    int nez1 = nz1_ - p;
 
-    this->ne = nex * ney * nez;
+    int nex2 = nx2_- p;
+    int ney2 = ny2_ - p;
+    int nez2 = nz2_ - p;
 
-    for(int iez = 0; iez < nez; iez++){
-        for(int iey = 0; iey < ney; iey++){
-            for(int iex = 0; iex < nex; iex++){
+    this->nn1 = nx1_ * ny1_ * nz1_;
+    this->nn2 = nx2_ * ny2_ * nz2_;
+
+
+    this->ne1 = nex1 * ney1 * nez1;
+    this->ne2 = nex2 * ney2 * nez2;
+    this->ne = ne1 + ne2;
+
+
+    for(int iez = 0; iez < nez1; iez++){
+        for(int iey = 0; iey < ney1; iey++){
+            for(int iex = 0; iex < nex1; iex++){
                 for(int i = 0; i <nen; i++){
                     for(int j = 0; j < nen; j++){
                         for(int k = 0; k < nen; k++){
-
-                            int ix = (iex + k + nx_) % nx_;
+                            int ix = (iex + k + nx1_) % nx1_;
                             int iy = iey + j;
                             int iz = iez + i;
-                            int id = iz * nx_ * ny_ + iy * nx_ + ix;
+                            int id = iz * nx1_ * ny1_ + iy * nx1_ + ix;
                             ien.push_back(id);
                         }
                     }
@@ -35,6 +45,25 @@ IGA::IGA (int p_, int nx_, int ny_, int nz_, std::vector<double> & cp_, int np_)
             }
         }
     }
+    for(int iez = 0; iez < nez2; iez++){
+        for(int iey = 0; iey <ney2; iey++){
+            for(int iex = 0; iex < nex2; iex++){
+                for(int i = 0; i < nen; i++){
+                    for(int j = 0; j < nen; j++){
+                        for(int k = 0; k < nen; k++){
+                            int ix = iex + k;
+                            int iy = iey + j;
+                            int iz = iez + i;
+                            int id = iz * nx2_ * ny2_ + iy * nx2_ + ix;   
+                            ien.push_back(nn1+id);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    
     for(int ie = 0; ie <= ne; ie++){
         ien_offset.push_back(ie * 64);
     }
@@ -136,7 +165,7 @@ vector<double> IGA::bspline_basis_function(int n, double u,vector<double> knot)
 	return N;
 }
 
-vector<double> IGA::bspline_curve()
+vector<double> IGA::bspline_curve(int nx)
 {
 	int np = 101;
 	vector<double> C(2 * np, 0.0);
@@ -160,7 +189,7 @@ vector<double> IGA::bspline_curve()
 	return C;
 }
 
-vector<double> IGA::bspline_surface()
+vector<double> IGA::bspline_surface(int nx, int ny)
 {
 	vector<double> C(2 * np * np, 0.0);
 	vector<double> knot_x = IGA::set_open_knot(nx);
@@ -194,7 +223,7 @@ vector<double> IGA::bspline_surface()
 	return C;
 }
 
-vector<double> IGA::bspline_volume()
+vector<double> IGA::bspline_volume(int nx, int ny, int nz)
 {
 	vector<double> C(3 * np * np * np, 0.0);
 	vector<double> knot_x = IGA::set_open_knot(nx);
@@ -242,7 +271,7 @@ vector<double> IGA::bspline_volume()
 	return C;
 }
 
-vector<double> IGA::nurbs_curve()
+vector<double> IGA::nurbs_curve(int nx)
 {
 	vector<double> C(2 * np, 0.0);
 	vector<double> knot = IGA::set_open_knot(nx);
@@ -275,7 +304,7 @@ vector<double> IGA::nurbs_curve()
 	return C;
 }
 
-vector<double> IGA::nurbs_surface()
+vector<double> IGA::nurbs_surface(int nx, int ny)
 {
 	vector<double> C(2 * np * np, 0.0);
 	vector<double> knot_x = IGA::set_open_knot(nx);
@@ -336,7 +365,7 @@ vector<double> IGA::nurbs_surface()
 	return C;
 }
 
-vector<double> IGA::nurbs_volume()
+vector<double> IGA::nurbs_volume(int nx, int ny, int nz)
 {
 	vector<double> C(3 * np * np * np, 0.0);
 	vector<double> knot_x = IGA::set_open_knot(nx);
@@ -511,7 +540,7 @@ vector<vector<double>> IGA::knot_insertion(int n){
     return C_ele;
 }
 
-void IGA::periodic_tube(){
+void IGA::periodic_tube(int nx){
     vector<double> C(nen*nen,0.0);
     C.at(0) = 1.0/6.0;
     C.at(1) = 0.0;
@@ -583,14 +612,13 @@ void IGA::periodic_tube(){
 
     r_ave /= static_cast<double>(count);
 
-    for(int i = 0; i < nn; i++){
+    for(int i = 0; i < nn1; i++){
         cp.at(i) /= r_ave;
         cp.at(nn + i) /= r_ave;
     }
 }
 
 vector<double> IGA::periodic_circle_nurbs(int n, double u){
-    int ne = n;
     vector<double> C(nen*nen,0.0);
     C.at(0) = 1.0/6.0;
     C.at(1) = 0.0;
@@ -639,25 +667,52 @@ vector<double> IGA::bezier_element(int n,double u,int ie){
     return R;
 }
 
-vector<double> IGA::nurbs_basis(int ie){
+vector<double> IGA::nurbs_basis(int ie,bool tube){
     int ien_offset = this->ien_offset.at(ie);
-    int nex = nx;
-    int ney = ny - p;
-    int nez = nz - p;
+    int nex;
+    int ney;
+    int nez;
 
-    int iex = ie % nex;
-    int iey = (ie / nex) % ney;
-    int iez = ie / (nex * ney);
+    int iex;
+    int iey;
+    int iez;
+
+    int nx;
+    int ny;
+    int nz;
+
+    if(tube){
+        nx = nx1;
+        ny = ny1;
+        nz = nz1;
+        nex = nx;
+        ney = ny - p;
+        nez = nz - p;
+        iex = ie % nex;
+        iey = (ie / nex) % ney;
+        iez = ie / (nex * ney);
+    }
+    else{
+        nx = nx2;
+        ny = ny2;
+        nz = nz2;
+        nex = nx - p;
+        ney = ny - p;
+        nez = nz - p;
+        iex = (ie-ne1) % nex;
+        iey = ((ie-ne1) / nex) % ney;
+        iez = (ie-ne1) / (nex * ney);
+    }
 
     vector<double> nurbs;
-    vector<double> w(nx*ny*nz,0.0);
-    for(int i = 0; i < nz; i++){
-        for(int j = 0; j < ny; j++){
-            for(int k = 0; k <nx; k++){
-                w.at(i*nx*ny+j*nx+k) = 1.0;
-            }
-        }
-    }
+    vector<double> w(nn,1.0);
+    // for(int i = 0; i < nz; i++){
+        // for(int j = 0; j < ny; j++){
+            // for(int k = 0; k <nx; k++){
+                // w.at(i*nx*ny+j*nx+k) = 1.0;
+            // }
+        // }
+    // }
 
     for(int itz = 0; itz < np; itz++){
         double tz = (double)itz/(np-1); 
@@ -667,7 +722,13 @@ vector<double> IGA::nurbs_basis(int ie){
             vector<double> Ry = IGA::bezier_element(ny,ty,iey);
             for(int itx = 0; itx < np; itx++){
                 double tx = (double)itx/(np-1);
-                vector<double> Rx = IGA::periodic_circle_nurbs(nx,tx);
+                vector<double> Rx;
+                if(tube){
+                     Rx = IGA::periodic_circle_nurbs(nx,tx);
+                }
+                else{
+                     Rx = IGA::bezier_element(nx,tx,iex);
+                }
                 vector<double> R(nen*nen*nen, 0.0);
                 for(int iz = 0; iz < nen; iz++){
                     for(int iy = 0; iy < nen; iy++){
@@ -794,16 +855,20 @@ vector<double> IGA::nurbs_iga(){
         }
     }
     #else
-    int nex = nx;
-    int ney = ny - p;
-    int nez = nz - p;
-    int ne = nex * ney * nez;
     vector<double> C(3 * ne * np * np * np, 0.0);
-    IGA::periodic_tube();
+    IGA::periodic_tube(nx1);
 
 
     for(int ie = 0; ie < ne; ie++){
-        vector<double> N = IGA::nurbs_basis(ie);
+        vector<double> N;
+        if(ie<ne1){
+            bool tube = true;
+            N = IGA::nurbs_basis(ie,tube);
+        }
+        else{
+            bool tube = false;
+            N = IGA::nurbs_basis(ie,tube);
+        }
         int ien_offset_e = this->ien_offset.at(ie);
         for(int itz = 0; itz < np; itz++){
             for(int ity = 0; ity < np; ity++){
