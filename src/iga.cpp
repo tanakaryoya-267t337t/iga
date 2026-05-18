@@ -1,6 +1,7 @@
 #include <iostream>
 #include <vector>
 #include <cmath>
+#include <fstream>
 #include "output.h"
 #include "iga.h"
 #include "bicg.h"
@@ -16,7 +17,7 @@ IGA::IGA (int p_, int nx1_, int ny1_, int nz1_,int nx2_, int ny2_, int nz2_, vec
     int nez1 = nz1_ - p;
 
     int nex2 = nx2_- p;
-    int ney2 = ny2_ - p;
+    int ney2 = ny2_ ;
     int nez2 = nz2_ - p;
 
     this->nn1 = nx1_ * ny1_ * nz1_;
@@ -51,11 +52,35 @@ IGA::IGA (int p_, int nx1_, int ny1_, int nz1_,int nx2_, int ny2_, int nz2_, vec
                 for(int i = 0; i < nen; i++){
                     for(int j = 0; j < nen; j++){
                         for(int k = 0; k < nen; k++){
-                            int ix = iex + k;
-                            int iy = iey + j;
-                            int iz = iez + i;
-                            int id = iz * nx2_ * ny2_ + iy * nx2_ + ix;   
-                            ien.push_back(nn1+id);
+                            int ix, iy, iz, id;
+                            if (iey < p){
+                                if(j < (nen-iey-1)){
+                                    if(iex == 0){
+                                        ix = -10*k;
+                                        iy = j + iey + nx1 * (ny1-1);
+                                        iz = nx1*ny1*i + iez*nx1*ny1;
+                                    }
+                                    else{
+                                        ix = 10*k;
+                                        iy = -j - iey + nx1*(ny1-p-1) + 2*p-1;
+                                        iz = nx1*ny1*i + iez*nx1*ny1;
+                                    }
+                                }
+                                else{
+                                    ix = k+iex;
+                                    iy = this->nn1 + (j-p+iey) * nx2;
+                                    iz = nx2*ny2*i + nx2*ny2*iez;
+                                }
+                                id = ix + iy + iz;
+                                ien.push_back(id);
+                            }
+                            else{
+                                ix = iex + k;
+                                iy = iey + j - p;
+                                iz = iez + i;
+                                id = iz * nx2_ * ny2_ + iy * nx2_ + ix;   
+                                ien.push_back(nn1+id);
+                            }
                         }
                     }
                 }
@@ -733,6 +758,21 @@ vector<double> IGA::nurbs_basis(int ie,bool tube){
                 for(int iz = 0; iz < nen; iz++){
                     for(int iy = 0; iy < nen; iy++){
                         for(int ix = 0; ix < nen; ix++){  
+                            if(tube == false && iey < p){
+                                if(iy < nen - (iey+1)){
+                                    ny = ny1;
+                                    nx = nx1;
+                                    int id = iz*nen*nen+iy*nen+ix;
+                                    int ien = this->ien.at(ien_offset+id);
+                                    iey = (ien/nx1)%(ny1-p);
+                                    
+                                    Ry = IGA::bezier_element(ny,ty,iey);
+                                    Rx = IGA::periodic_circle_nurbs(nx,tx);
+                                }
+                                else{
+                                    Ry = IGA::bezier_element(ny,ty,iey-p);
+                                }
+                            }
                             int id = iz*nen*nen + iy*nen + ix;
                             R.at(id) = Rx.at(ix) * Ry.at(iy) * Rz.at(iz);
                         }

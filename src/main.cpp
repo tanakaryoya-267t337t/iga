@@ -1,7 +1,7 @@
+#include <iostream>
 #include <vector>
 #include <cmath>
 #include <string>
-#include <iostream>
 #include "output.h"
 #include "iga.h"
 #include "bicg.h"
@@ -88,7 +88,7 @@ int ne = (np-1) * (np-1) * (np - 1) * ne_bezier;
 IGA iga(p, nx1, ny1, nz1, nx2, ny2, nz2, cp, np);
 vector<double> C = iga.nurbs_iga();
 
-string filename = "messentary_tube.vtk";
+string filename = "ien_set_messentary_tube.vtk";
 Output(np, nn, ne, C, filename);
 return 0;
 }
