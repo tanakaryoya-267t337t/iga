@@ -37,7 +37,8 @@ class IGA {
     std::vector<std::vector<double>> knot_insertion(int n);
     void periodic_tube(int nx);
     std::vector<double> periodic_circle_nurbs(int n, double u);
-    std::vector<double> bezier_element(int n, double u, int ie);
+    std::vector<double> bezier_element(int n, double u, int ie, std::vector<std::vector<double>> & C);
+    std::vector<double> connect_patch_basis_x(double tx, int iex, int ix,std::vector<std::vector<double>> & Cx);
     std::vector<double> nurbs_basis(int ie, bool tube);
     std::vector<double> nurbs_iga();
     IGA (int p_, int nx1_, int ny1_, int nz1_, int nx2_, int ny2_, int nz2_, std::vector<double> & cp_, int np_);

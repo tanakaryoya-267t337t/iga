@@ -11,13 +11,13 @@ using namespace std;
 int main()
 {
 	int p = 3;
-	int nx1 = 10;
+	int nx1 = 18;
 	int ny1 = 5;
 	int nz1 = 8;
     int nn1 = nx1 * ny1 * nz1;
 
-    int nx2 = 5;
-    int ny2 = 8;
+    int nx2 = 8;
+    int ny2 = ny1;
     int nz2 = nz1;
     int nn2 = nx2 * ny2 * nz2;
 
@@ -67,9 +67,14 @@ int main()
     for(int i = 0; i < nz2; i++){
         for(int j = 0; j < ny2; j++){
             for(int k = 0; k < nx2; k++){
-                double x = 0.10 - 0.20/(nx2-1)*k;
-                double y = 1.0 + 1.50/(ny2-1)*j;
-                double l = 4.0/(nz2-1)*i;
+                double y = 1.01 + 1.50/(nx2-1)*k;
+                double x = 0.05 - 0.10/(ny2-1)*j;
+                double s = (double)k/(nx2-1);
+                double zc = 2.0;
+                double half_width = 2.0*(1.0 -0.75*s);
+                double t = (double)i/(nz2-1);
+                double l = zc + half_width * (2.0*t -1.0);
+                // double l = 4.0/(nz2-1)*i*(1.0/(k+1))+(2.0-2.0/(k+1));
                 int id = i*nx2*ny2 + j*nx2 + k;
                 cp.at(nn1 + id) = x;
                 cp.at((nn1+nn2) + nn1 + id) = y;
@@ -82,13 +87,13 @@ int main()
 
 
 int np = 10;
-int ne_bezier = nx1 * (ny1 - p) * (nz1 - p) + (nx2 - p) * (ny2 - p) * (nz2 - p);
+int ne_bezier = nx1 * (ny1 - p) * (nz1 - p) + nx2 * (ny2 - p) * (nz2 - p);
 int nn = np * np * np * ne_bezier;
 int ne = (np-1) * (np-1) * (np - 1) * ne_bezier;
 IGA iga(p, nx1, ny1, nz1, nx2, ny2, nz2, cp, np);
 vector<double> C = iga.nurbs_iga();
 
-string filename = "ien_set_messentary_tube.vtk";
+string filename = "tube_with_messentary.vtk";
 Output(np, nn, ne, C, filename);
 return 0;
 }

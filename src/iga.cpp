@@ -16,8 +16,8 @@ IGA::IGA (int p_, int nx1_, int ny1_, int nz1_,int nx2_, int ny2_, int nz2_, vec
     int ney1 = ny1_ - p;
     int nez1 = nz1_ - p;
 
-    int nex2 = nx2_- p;
-    int ney2 = ny2_ ;
+    int nex2 = nx2_;
+    int ney2 = ny2_ - p;
     int nez2 = nz2_ - p;
 
     this->nn1 = nx1_ * ny1_ * nz1_;
@@ -49,34 +49,36 @@ IGA::IGA (int p_, int nx1_, int ny1_, int nz1_,int nx2_, int ny2_, int nz2_, vec
     for(int iez = 0; iez < nez2; iez++){
         for(int iey = 0; iey <ney2; iey++){
             for(int iex = 0; iex < nex2; iex++){
-                for(int i = 0; i < nen; i++){
-                    for(int j = 0; j < nen; j++){
-                        for(int k = 0; k < nen; k++){
+                for(int i = 0; i < this->nen; i++){
+                    for(int j = 0; j < this->nen; j++){
+                        for(int k = 0; k < this->nen; k++){
                             int ix, iy, iz, id;
-                            if (iey < p){
-                                if(j < (nen-iey-1)){
-                                    if(iex == 0){
-                                        ix = -10*k;
-                                        iy = j + iey + nx1 * (ny1-1);
-                                        iz = nx1*ny1*i + iez*nx1*ny1;
+                            if (iex < p){
+                                if(k < (this->nen-iex-1)){
+                                    if(iey == 0){
+                                        ix = k + iex;
+                                        // iy = -this->nx1*j;
+                                        iz = this->nx1*this->ny1*i + iez*this->nx1*this->ny1;
+                                        id = this->nx1 * (this->ny1-1)  + 2 + ix  + iz;
                                     }
                                     else{
-                                        ix = 10*k;
-                                        iy = -j - iey + nx1*(ny1-p-1) + 2*p-1;
-                                        iz = nx1*ny1*i + iez*nx1*ny1;
+                                        ix = -k - iex;
+                                        iy = this->nx1*3; 
+                                        iz = this->nx1*this->ny1*i + iez*this->nx1*this->ny1;
+                                        id = this->nx1*(this->ny1-p-1) + 2 + (2*p-1) + ix + iy + iz;
                                     }
                                 }
                                 else{
-                                    ix = k+iex;
-                                    iy = this->nn1 + (j-p+iey) * nx2;
-                                    iz = nx2*ny2*i + nx2*ny2*iez;
+                                    ix = k+iex-p;
+                                    iy = (j + iey) * this->nx2;
+                                    iz = this->nx2*this->ny2*(i + iez);
+                                    id = this->nn1 + ix + iy + iz;
                                 }
-                                id = ix + iy + iz;
                                 ien.push_back(id);
                             }
                             else{
-                                ix = iex + k;
-                                iy = iey + j - p;
+                                ix = iex + k - p;
+                                iy = iey + j;
                                 iz = iez + i;
                                 id = iz * nx2_ * ny2_ + iy * nx2_ + ix;   
                                 ien.push_back(nn1+id);
@@ -88,6 +90,14 @@ IGA::IGA (int p_, int nx1_, int ny1_, int nz1_,int nx2_, int ny2_, int nz2_, vec
         }
     }
 
+    ofstream opien("ien.txt");
+    for(int ie = this->ne1; ie < this->ne; ie++){
+        for(int i = 0l; i < nen*nen*nen; i++){
+            opien << ien.at(ie*nen*nen*nen + i) << " ";
+        }
+        opien << endl;
+    }
+
     
     for(int ie = 0; ie <= ne; ie++){
         ien_offset.push_back(ie * 64);
@@ -97,27 +107,32 @@ IGA::IGA (int p_, int nx1_, int ny1_, int nz1_,int nx2_, int ny2_, int nz2_, vec
 vector<double> IGA::bernstein_basis_function(double u)
 {
 	vector<double> B(p + 1, 0.0);
-	vector<double> Bn(p + 1, 0.0);
-	B.at(0) = 1.0;
-	for (int i = 0; i < p; i++)
-	{
-		Bn.at(0) = (1 - u) * B.at(0);
-		for (int j = 1; j < p + 1; j++)
-		{
-			if (j > i + 1)
-			{
-				Bn.at(j) = 0.0;
-			}
-			else
-			{
-				Bn.at(j) = (1 - u) * B.at(j) + u * B.at(j - 1);
-			}
-		}
-		for (int j = 0; j < p + 1; j++)
-		{
-			B.at(j) = Bn.at(j);
-		}
-	}
+	// vector<double> Bn(p + 1, 0.0);
+	// B.at(0) = 1.0;
+	// for (int i = 0; i < p; i++)
+	// {
+		// Bn.at(0) = (1 - u) * B.at(0);
+		// for (int j = 1; j < p + 1; j++)
+		// {
+			// if (j > i + 1)
+			// {
+				// Bn.at(j) = 0.0;
+			// }
+			// else
+			// {
+				// Bn.at(j) = (1 - u) * B.at(j) + u * B.at(j - 1);
+			// }
+		// }
+		// for (int j = 0; j < p + 1; j++)
+		// {
+			// B.at(j) = Bn.at(j);
+		// }
+	// }
+    double mu = (1.0 - u);
+    B.at(0) = mu*mu*mu;     
+    B.at(1) = 3.0*mu*mu*u;
+    B.at(2) = 3.0*mu*u*u;
+    B.at(3) = u*u*u;
 	return B;
 }
 
@@ -673,14 +688,14 @@ vector<double> IGA::periodic_circle_nurbs(int n, double u){
     return R;
 }
 
-vector<double> IGA::bezier_element(int n,double u,int ie){
+vector<double> IGA::bezier_element(int n,double u,int ie,vector<vector<double>> & C){
     vector<double> R(p+1,0.0);
-    vector<vector<double>> C = IGA::knot_insertion(n);
-    vector<double> knot = IGA::set_open_knot(n);
-    vector<int> knotspan = IGA::set_knotspan(knot);
-    vector<double> insert_knot = IGA::set_insert_knot(knot, knotspan);
-    int m = insert_knot.size();
-    int N = n+m;
+    // vector<vector<double>> C = IGA::knot_insertion(n);
+    // vector<double> knot = IGA::set_open_knot(n);
+    // vector<int> knotspan = IGA::set_knotspan(knot);
+    // vector<double> insert_knot = IGA::set_insert_knot(knot, knotspan);
+    // int m = insert_knot.size();
+    // int N = n+m;
 
     vector<double> B = IGA::bernstein_basis_function(u);
 
@@ -690,6 +705,22 @@ vector<double> IGA::bezier_element(int n,double u,int ie){
         }
     }
     return R;
+}
+
+vector<double> IGA::connect_patch_basis_x(double tx, int iex, int ix,vector<vector<double>> & Cx){
+    vector<double> Rx(nen,0.0);
+    if(iex < p){
+        if(ix < (this->nen-iex-1)){
+            Rx = IGA::periodic_circle_nurbs(nx1,tx);
+        }
+        else{
+            Rx = IGA::bezier_element(nx1,tx,0,Cx);
+        }
+    }
+    else{
+        Rx = IGA::bezier_element(nx2,tx,iex-p,Cx);
+    }
+    return Rx;
 }
 
 vector<double> IGA::nurbs_basis(int ie,bool tube){
@@ -721,13 +752,17 @@ vector<double> IGA::nurbs_basis(int ie,bool tube){
         nx = nx2;
         ny = ny2;
         nz = nz2;
-        nex = nx - p;
+        nex = nx;
         ney = ny - p;
         nez = nz - p;
         iex = (ie-ne1) % nex;
         iey = ((ie-ne1) / nex) % ney;
         iez = (ie-ne1) / (nex * ney);
     }
+    
+    vector<vector<double>> Cx = knot_insertion(nx);
+    vector<vector<double>> Cy = knot_insertion(ny);
+    vector<vector<double>> Cz = knot_insertion(nz);
 
     vector<double> nurbs;
     vector<double> w(nn,1.0);
@@ -741,37 +776,22 @@ vector<double> IGA::nurbs_basis(int ie,bool tube){
 
     for(int itz = 0; itz < np; itz++){
         double tz = (double)itz/(np-1); 
-        vector<double> Rz = IGA::bezier_element(nz,tz,iez);
+        vector<double> Rz = IGA::bezier_element(nz,tz,iez,Cz);
         for(int ity = 0; ity < np; ity++){
             double ty = (double)ity/(np-1);
-            vector<double> Ry = IGA::bezier_element(ny,ty,iey);
+            vector<double> Ry = IGA::bezier_element(ny,ty,iey,Cy);
             for(int itx = 0; itx < np; itx++){
                 double tx = (double)itx/(np-1);
                 vector<double> Rx;
-                if(tube){
-                     Rx = IGA::periodic_circle_nurbs(nx,tx);
-                }
-                else{
-                     Rx = IGA::bezier_element(nx,tx,iex);
-                }
                 vector<double> R(nen*nen*nen, 0.0);
                 for(int iz = 0; iz < nen; iz++){
                     for(int iy = 0; iy < nen; iy++){
                         for(int ix = 0; ix < nen; ix++){  
-                            if(tube == false && iey < p){
-                                if(iy < nen - (iey+1)){
-                                    ny = ny1;
-                                    nx = nx1;
-                                    int id = iz*nen*nen+iy*nen+ix;
-                                    int ien = this->ien.at(ien_offset+id);
-                                    iey = (ien/nx1)%(ny1-p);
-                                    
-                                    Ry = IGA::bezier_element(ny,ty,iey);
-                                    Rx = IGA::periodic_circle_nurbs(nx,tx);
-                                }
-                                else{
-                                    Ry = IGA::bezier_element(ny,ty,iey-p);
-                                }
+                            if(tube){
+                                Rx = IGA::periodic_circle_nurbs(nx,tx);
+                            }
+                            else{
+                                Rx = IGA::connect_patch_basis_x(tx,iex,ix,Cx);
                             }
                             int id = iz*nen*nen + iy*nen + ix;
                             R.at(id) = Rx.at(ix) * Ry.at(iy) * Rz.at(iz);
@@ -922,6 +942,7 @@ vector<double> IGA::nurbs_iga(){
                                 int id = itz*np*np*nen*nen*nen + ity*np*nen*nen*nen + itx*nen*nen*nen + iz*nen*nen + iy*nen + ix;
                                 int ied = iz*nen*nen + iy*nen + ix;
                                 int ien_e = this->ien.at(ien_offset_e+ied);
+                                
                                 cx += N.at(id) * cp.at(ien_e);
                                 cy += N.at(id) * cp.at(nn + ien_e);
                                 cz += N.at(id) * cp.at(2 *nn + ien_e);
