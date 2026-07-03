@@ -2,9 +2,7 @@
 #include <vector>
 #include <cmath>
 #include <fstream>
-#include "output.h"
-#include "iga.h"
-#include "bicg.h"
+#include "mydef.h"
 
 using namespace std;
 
@@ -12,21 +10,24 @@ IGA::IGA (int p_, int nx1_, int ny1_, int nz1_,int nx2_, int ny2_, int nz2_, vec
     this->nn = nx1_*ny1_*nz1_ + nx2_*ny2_*nz2_;
     this->nen = p + 1;
 
-    int nex1 = nx1_;
-    int ney1 = ny1_ - p;
+    int nex1 = nx1_ - p;
+    int ney1 = ny1_;
     int nez1 = nz1_ - p;
 
-    int nex2 = nx2_;
-    int ney2 = ny2_ - p;
-    int nez2 = nz2_ - p;
-
     this->nn1 = nx1_ * ny1_ * nz1_;
-    this->nn2 = nx2_ * ny2_ * nz2_;
-
-
     this->ne1 = nex1 * ney1 * nez1;
-    this->ne2 = nex2 * ney2 * nez2;
-    this->ne = ne1 + ne2;
+    this->ne = ne1;
+
+    #ifdef (MESENTERY)
+        int nex2 = nx2_ - p;
+        int ney2 = ny2_;
+        int nez2 = nz2_ - p;
+
+        this->nn2 = nx2_ * ny2_ * nz2_;
+        this->ne2 = nex2 * ney2 * nez2;
+
+        this->ne += ne2;
+    #endif
 
 
     for(int iez = 0; iez < nez1; iez++){
@@ -46,6 +47,7 @@ IGA::IGA (int p_, int nx1_, int ny1_, int nz1_,int nx2_, int ny2_, int nz2_, vec
             }
         }
     }
+    #ifdef (MESENTERY)
     for(int iez = 0; iez < nez2; iez++){
         for(int iey = 0; iey <ney2; iey++){
             for(int iex = 0; iex < nex2; iex++){
@@ -89,14 +91,15 @@ IGA::IGA (int p_, int nx1_, int ny1_, int nz1_,int nx2_, int ny2_, int nz2_, vec
             }
         }
     }
+    #endif
 
-    ofstream opien("ien.txt");
-    for(int ie = this->ne1; ie < this->ne; ie++){
-        for(int i = 0l; i < nen*nen*nen; i++){
-            opien << ien.at(ie*nen*nen*nen + i) << " ";
-        }
-        opien << endl;
-    }
+    // ofstream opien("ien.txt");
+    // for(int ie = this->ne1; ie < this->ne; ie++){
+        // for(int i = 0l; i < nen*nen*nen; i++){
+            // opien << ien.at(ie*nen*nen*nen + i) << " ";
+        // }
+        // opien << endl;
+    // }
 
     
     for(int ie = 0; ie <= ne; ie++){

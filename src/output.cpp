@@ -3,7 +3,7 @@
 #include <cstdio>
 #include <vector>
 #include <string>
-#include "output.h"
+#include "mydef.h"
 
 using namespace std;
 

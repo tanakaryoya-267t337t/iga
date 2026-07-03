@@ -2,38 +2,46 @@
 #include <vector>
 #include <cmath>
 #include <string>
-#include "output.h"
-#include "iga.h"
-#include "bicg.h"
+#include "mydef.h"
 
 using namespace std;
 
 int main()
 {
 	int p = 3;
-	int nx1 = 18;
-	int ny1 = 5;
-	int nz1 = 8;
-    int nn1 = nx1 * ny1 * nz1;
+	int nx = 18;
+	int ny = 5;
+	int nz = 8;
 
-    int nx2 = 8;
-    int ny2 = ny1;
-    int nz2 = nz1;
-    int nn2 = nx2 * ny2 * nz2;
+    #ifdef CURVE
+        int ny = 1;
+        int nz = 1;
+    #elif defined(SURFACE)
+        int nz = 1;
+    #endif
+    int nn = nx * ny * nz;
 
-    int nx = nx1 + nx2;
-    int ny = ny1 + ny2;
-    int nz = nz1 + nz2;
+    #ifdef MESENTERY
+        int nx2 = 8;
+        int ny2 = ny1;
+        int nz2 = nz1;
+        int nn2 = nx2 * ny2 * nz2;
+        nx += nx2;
+        ny += ny2;
+        nz += nz2;
+        nn += nn2;
+    #endif
 
 
 
-#if 0 
+
+#ifdef CURVE
 	vector<double> cp(2*nx,0.0);
 	for(int i = 0; i < nx; i++){
 		cp.at(i) = 1.0*cos(2*M_PI/(nx)*i);
 		cp.at(nx+i) = 1.0*sin(2*M_PI/(nx)*i);
 	}
-#elif 0 
+#elif defined(SURFACE)
 	vector<double> cp(2 * nx * ny, 0.0);
     double pi = acos(-1.0);
     for(int i = 0; i < ny; i++){
@@ -46,28 +54,29 @@ int main()
         }
     }
 #else
-	vector<double> cp(3 * (nn1+nn2), 0.0);
+	vector<double> cp(3 * (nn), 0.0);
     double pi = acos(-1.0);
-	for (int i = 0; i < nz1; i++)
+	for (int i = 0; i < nz; i++)
 	{
-		for (int j = 0; j < ny1; j++)
+		for (int j = 0; j < ny; j++)
 		{
-			for (int k = 0; k < nx1; k++)
+			for (int k = 0; k < nx; k++)
 			{
-                double theta = 2.0*pi*k/nx1;
-                double r = 0.80 + (1.0 - 0.80)/(ny1-1) * j;
-                double l = 4.0/(nz1-1)*i;
-				int id = i * nx1 * ny1 + j * nx1 + k;
+                double theta = 2.0*pi*k/nx;
+                double r = 0.80 + (1.0 - 0.80)/(ny-1) * j;
+                double l = 4.0/(nz-1)*i;
+				int id = i * nx * ny + j * nx + k;
 				cp.at(id) = r * cos(theta);
-				cp.at((nn1+nn2) + id) = r * sin(theta);
-				cp.at(2*(nn1+nn2) + id) = l;
+				cp.at(nn + id) = r * sin(theta);
+				cp.at(2*nn + id) = l;
 			}
 		}
 	}
+    #ifdef MESENTERY
     for(int i = 0; i < nz2; i++){
         for(int j = 0; j < ny2; j++){
             for(int k = 0; k < nx2; k++){
-                double y = 1.01 + 1.50/(nx2-1)*k;
+                double y = 1.00 + 1.50/(nx2-1)*k;
                 double x = 0.05 - 0.10/(ny2-1)*j;
                 double s = (double)k/(nx2-1);
                 double zc = 2.0;
@@ -82,6 +91,7 @@ int main()
             }
         }
     }
+    #endif
 
 #endif
 
