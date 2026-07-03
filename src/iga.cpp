@@ -6,47 +6,82 @@
 
 using namespace std;
 
-IGA::IGA (int p_, int nx1_, int ny1_, int nz1_,int nx2_, int ny2_, int nz2_, vector<double> & cp_, int np_):p(p_),nx1(nx1_),ny1(ny1_),nz1(nz1_),nx2(nx2_),ny2(ny2_),nz2(nz2_),cp(cp_),np(np_){
-    this->nn = nx1_*ny1_*nz1_ + nx2_*ny2_*nz2_;
+IGA::IGA (int p_, int ncp1_, int ncp2_, int ncp3_,int mcp1_, int mcp2_, int mcp3_, vector<double> & cp_, int np_):p(p_),ncp1(ncp1_),ncp2(ncp2_),ncp3(ncp3_),mcp1(mcp1_),mcp2(mcp2_),mcp3(mcp3_),cp(cp_),np(np_){
+    this->nn = ncp1_ * ncp2_ * ncp3_;
+    #ifdef (MESENTERY)
+        this->nn += mcp1_ * mcp2_ * mcp3_;
+    #endif
     this->nen = p + 1;
 
-    int nex1 = nx1_ - p;
-    int ney1 = ny1_;
-    int nez1 = nz1_ - p;
+    int net1 = ncp1_ - p;
+    int net2 = ncp2_;
+    int net3 = ncp3_ - p;
 
-    this->nn1 = nx1_ * ny1_ * nz1_;
-    this->ne1 = nex1 * ney1 * nez1;
-    this->ne = ne1;
-
-    #ifdef (MESENTERY)
-        int nex2 = nx2_ - p;
-        int ney2 = ny2_;
-        int nez2 = nz2_ - p;
-
-        this->nn2 = nx2_ * ny2_ * nz2_;
-        this->ne2 = nex2 * ney2 * nez2;
-
-        this->ne += ne2;
+    #if defined(CURVE)
+        net2 = 1;
+        net3 = 1;
+    #elif defined(SURFACE)
+        net3 = 1;
     #endif
 
 
-    for(int iez = 0; iez < nez1; iez++){
-        for(int iey = 0; iey < ney1; iey++){
-            for(int iex = 0; iex < nex1; iex++){
+    this->nnt = ncp1_ * ncp2_ * ncp3_;
+    this->net = net1 * net2 * net3;
+    this->ne = net;
+
+    #ifdef (MESENTERY)
+        int nem1 = mcp1_ - p;
+        int nem2 = mcp2_;
+        int nem3 = mcp3_ - p;
+
+        this->nnm = mcp1_ * mcp2_ * mcp3_;
+        this->nem = nem1 * nem2 * nem3;
+
+        this->ne += nem;
+    #endif
+
+
+    #ifdef (CURVE)
+        for(int ie1 = 0; ie1 < net1; ie1++){
+            for(int i = 0; i < nen; i++){
+                int i1 = ie1 + i;
+                this->ien.push_back(i1);
+            }
+        }
+    #elif defined(SURFACE)
+        for(int ie2 = 0; ie2 < net2; ie2++){
+            for(int ie1 = 0; ie1 < net1; ie1++){
+                for(int i = 0; i < nen; i++){
+                    for(int j = 0; j < nen; j++){
+                        int i1 = ie1 + i;
+                        int i2 = (ie2 + j + ncp2_) % ncp2_;
+                        int id = i2 * ncp1_ + i1;
+                        this->ien.push_back(id);
+                    }
+                }
+            }
+        }
+
+
+
+    for(int ie3 = 0; ie3 < net3; ie3++){
+        for(int ie2 = 0; ie2 < net2; ie2++){
+            for(int ie1 = 0; ie1 < net1; ie1++){
                 for(int i = 0; i <nen; i++){
                     for(int j = 0; j < nen; j++){
                         for(int k = 0; k < nen; k++){
-                            int ix = (iex + k + nx1_) % nx1_;
-                            int iy = iey + j;
-                            int iz = iez + i;
-                            int id = iz * nx1_ * ny1_ + iy * nx1_ + ix;
-                            ien.push_back(id);
+                            int i1 = ie1 + k; 
+                            int i2 = (ie2 + j + ncp2_) % ncp2_;
+                            int i3 = ie3 + i;
+                            int id = i3 * ncp1_ * ncp2_ + i2 * ncp1_ + i1;
+                            this->ien.push_back(id);
                         }
                     }
                 }
             }
         }
     }
+    #endif
     #ifdef (MESENTERY)
     for(int iez = 0; iez < nez2; iez++){
         for(int iey = 0; iey <ney2; iey++){
@@ -102,8 +137,9 @@ IGA::IGA (int p_, int nx1_, int ny1_, int nz1_,int nx2_, int ny2_, int nz2_, vec
     // }
 
     
+    int nen = this->nen * this->nen * this->nen;
     for(int ie = 0; ie <= ne; ie++){
-        ien_offset.push_back(ie * 64);
+        ien_offset.push_back(ie * nen);
     }
 }
 
@@ -139,7 +175,7 @@ vector<double> IGA::bernstein_basis_function(double u)
 	return B;
 }
 
-vector<double>IGA::set_open_knot(int n)
+vector<double>IGA::set_open_knot(int ncp)
 {
     vector<double> knot;
 	double int_knot = 0.0;
@@ -147,7 +183,7 @@ vector<double>IGA::set_open_knot(int n)
 	{
 		knot.push_back(int_knot);
 	}
-	int num_int_knot = n + p + 1 - 2 * (p + 1);
+	int num_int_knot = ncp + p + 1 - 2 * (p + 1);
 	int_knot++;
 
 	for (int i = 0; i < num_int_knot; i++)
@@ -163,11 +199,11 @@ vector<double>IGA::set_open_knot(int n)
 	return knot;
 }
 
-vector<double> IGA::bspline_basis_function(int n, double u,vector<double> knot)
+vector<double> IGA::bspline_basis_function(int ncp, double u,vector<double> knot)
 {
-	vector<double> N(n, 0.0);
-	vector<double> Nn(n, 0.0);
-	for (int i = 0; i < n; i++)
+	vector<double> N(ncp, 0.0);
+	vector<double> Nn(ncp, 0.0);
+	for (int i = 0; i < ncp; i++)
 	{
 		if (u >= knot.at(i) && u < knot.at(i + 1))
 		{
@@ -180,7 +216,7 @@ vector<double> IGA::bspline_basis_function(int n, double u,vector<double> knot)
 	}
 	if (u == knot.back())
 	{
-		N.at(n - 1) = 1.0;
+		N.at(ncp - 1) = 1.0;
 	}
 	for (int i = 0; i < p; i++)
 	{
